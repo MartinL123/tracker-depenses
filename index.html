@@ -535,7 +535,7 @@ window._del = function(dateStr) {
     tr.style.transition='opacity 0.15s';
     tr.style.opacity='0';
   }
-  setTimeout(()=>{
+  setTimeout(async ()=>{
     EXTRAS = EXTRAS.filter(d=>d[0]!==dateStr);
     DATA = DATA.filter(d=>d[0]!==dateStr);
     await saveExtras();
