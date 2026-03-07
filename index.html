@@ -137,12 +137,34 @@ td:last-child { text-align:right; }
 .j-log-item .j-time { color:var(--muted2); }
 @keyframes fadeIn { from{opacity:0;transform:translateX(-4px);}to{opacity:1;transform:none;} }
 
-/* DELETE BTN */
-.td-interval { display:flex; align-items:center; justify-content:flex-end; gap:8px; }
-.btn-del { background:transparent; border:none; color:var(--muted); font-size:14px; cursor:pointer; padding:2px 6px; border-radius:6px; transition:all 0.15s; line-height:1; opacity:0; width:26px; flex-shrink:0; }
-.btn-del-placeholder { display:inline-block; width:26px; flex-shrink:0; }
-tbody tr:hover .btn-del { opacity:1; }
-.btn-del:hover { color:var(--red); background:var(--red-dim); }
+/* CLICK TO REVEAL DELETE BUTTON */
+.td-interval { display:flex; align-items:center; justify-content:flex-end; gap:8px; position:relative; }
+tbody tr.deletable { cursor:pointer; }
+tbody tr.deletable:hover { background:rgba(58,134,255,0.04); }
+tbody tr.selected { background:rgba(240,68,56,0.03) !important; }
+.del-circle {
+  display:none;
+  width:32px; height:32px; min-width:32px;
+  background:var(--red);
+  border-radius:50%;
+  border:none;
+  cursor:pointer;
+  align-items:center; justify-content:center;
+  flex-shrink:0;
+  box-shadow:0 4px 14px rgba(240,68,56,0.45);
+  transition:transform 0.15s, box-shadow 0.15s;
+  animation: popIn 0.22s cubic-bezier(.34,1.56,.64,1);
+  padding:0;
+  line-height:1;
+}
+tbody tr.selected .del-circle { display:flex; }
+.del-circle svg { width:14px; height:14px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
+.del-circle:hover { transform:scale(1.1); box-shadow:0 6px 18px rgba(240,68,56,0.65); }
+.del-circle:active { transform:scale(0.92); }
+@keyframes popIn {
+  from { transform:scale(0); opacity:0; }
+  to   { transform:scale(1); opacity:1; }
+}
 
 /* TOAST */
 .toast { position:fixed; bottom:28px; right:28px; background:var(--bg2); border:1px solid var(--border); border-left:3px solid var(--blue); border-radius:12px; padding:14px 18px; font-family:'Poppins',sans-serif; font-size:12px; font-weight:500; color:var(--text); box-shadow:0 8px 24px rgba(0,0,0,0.4); transform:translateY(70px); opacity:0; transition:all 0.32s cubic-bezier(.34,1.56,.64,1); z-index:999; }
@@ -302,6 +324,7 @@ const ORIG_DATA = [
   ['2025-11-03', 200], ['2025-11-15', 200], ['2025-11-26', 200],
   ['2025-12-05', 200], ['2026-01-11', 200], ['2026-01-24', 200],
   ['2026-02-04', 200], ['2026-02-14', 200], ['2026-02-25', 200],
+  ['2026-03-07', 200],
 ];
 const ORIG = new Set(ORIG_DATA.map(d => d[0]));
 const SACHETS = 5;
@@ -311,7 +334,7 @@ let J_LOG = [];
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-const firebaseConfig = { apiKey: "AIzaSyA8tPw48yaI8zCdhSLJXZdCWrKx9bm20Gg", authDomain: "tracker-depenses.firebaseapp.com", projectId: "tracker-depenses", storageBucket: "tracker-depenses.firebasestorage.app", messagingSenderId: "622273985032", appId: "1:622273985032:web:dc17d4e5c0da2a58746fbd" };
+const firebaseConfig = { apiKey: "AIzaSyA8tPw48yaI8zCdhSLJXZdCWrKx9bm20Gg", authDomain: "tracker-depenses.firebaseapp.com", projectId: "tracker-depenses", storageBucket: "tracker-depenses.firebasestorage.app", messagingSenderId: "622173985032", appId: "1:622173985032:web:dc17d4e5c0da2a58746fbd" };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const REF_A = doc(db, 'tracker', 'achats');
@@ -320,7 +343,6 @@ async function saveExtras() { await setDoc(REF_A, { entries: EXTRAS.map(e => ({d
 async function saveJ() { await setDoc(REF_J, { log: J_LOG }); }
 
 function mergeData(extras) {
-  // Firebase stores objects {date, amount}, convert back to [date, amount]
   const normalized = (extras || []).map(x => Array.isArray(x) ? x : [x.date, x.amount]);
   EXTRAS = normalized.filter(x => !ORIG.has(x[0]));
   DATA = [...ORIG_DATA, ...EXTRAS];
@@ -378,9 +400,12 @@ function renderAchats(hl) {
     const pill = r.days===null ? `<span class="badge n">—</span>`
       : `<span class="badge ${r.days>=20?'g':r.days>=10?'o':'r'}">${r.days>=20?'↑':r.days>=10?'→':'↓'} ${r.days}j</span>`;
     const canDel = !ORIG.has(r.dateStr);
-    const delBtn = canDel ? `<button class="btn-del" onclick="window._del('${r.dateStr}')" title="Supprimer">✕</button>` : `<span class="btn-del-placeholder"></span>`;
-    return `<tr${hl&&i===0?' class="tr-new"':''}><td>${fmt(r.dateStr)}</td><td>${r.amount}€</td><td class="td-interval">${pill}${delBtn}</td></tr>`;
+    const delCircle = canDel ? `<button class="del-circle" onclick="window._del('${r.dateStr}')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>` : '';
+    const trClass = [hl&&i===0?'tr-new':'', canDel?'deletable':''].filter(Boolean).join(' ');
+    const attr = canDel ? ` data-date="${r.dateStr}"` : '';
+    return `<tr${trClass?' class="'+trClass+'"':''}${attr}><td>${fmt(r.dateStr)}</td><td>${r.amount}€</td><td class="td-interval" style="position:relative;overflow:visible">${pill}${delCircle}</td></tr>`;
   }).join('');
+  attachRowListeners();
 }
 
 function drawChart(data) {
@@ -488,12 +513,35 @@ function renderJ() {
   }
 }
 
+function attachRowListeners() {
+  document.querySelectorAll('#tbody tr.deletable').forEach(tr => {
+    tr.addEventListener('click', e => {
+      if(e.target.closest('.del-circle')) return;
+      const was = tr.classList.contains('selected');
+      document.querySelectorAll('#tbody tr.selected').forEach(r => r.classList.remove('selected'));
+      if(!was) tr.classList.add('selected');
+    });
+  });
+  document.addEventListener('click', e => {
+    if(!e.target.closest('#tbody tr')) {
+      document.querySelectorAll('#tbody tr.selected').forEach(r => r.classList.remove('selected'));
+    }
+  });
+}
+
 window._del = function(dateStr) {
-  if(ORIG.has(dateStr)) return toast('Impossible de supprimer un achat d\'origine.',1);
-  const idx=DATA.findIndex(d=>d[0]===dateStr);
-  if(idx===-1) return;
-  DATA.splice(idx,1); saveA();
-  toast('Achat du '+fmt(dateStr)+' supprimé.');
+  const tr = document.querySelector(`#tbody tr[data-date="${dateStr}"]`);
+  if(tr) {
+    tr.style.transition='opacity 0.15s';
+    tr.style.opacity='0';
+  }
+  setTimeout(()=>{
+    EXTRAS = EXTRAS.filter(d=>d[0]!==dateStr);
+    DATA = DATA.filter(d=>d[0]!==dateStr);
+    await saveExtras();
+    renderAchats(false);
+    toast('Achat supprimé ✓');
+  },150);
 };
 window.addExpense = async function() {
   const d=document.getElementById('inDate').value;
