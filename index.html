@@ -316,11 +316,13 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const REF_A = doc(db, 'tracker', 'achats');
 const REF_J = doc(db, 'tracker', 'jlog');
-async function saveExtras() { await setDoc(REF_A, { entries: EXTRAS }); }
+async function saveExtras() { await setDoc(REF_A, { entries: EXTRAS.map(e => ({date: e[0], amount: e[1]})) }); }
 async function saveJ() { await setDoc(REF_J, { log: J_LOG }); }
 
 function mergeData(extras) {
-  EXTRAS = (extras || []).filter(x => !ORIG.has(x[0]));
+  // Firebase stores objects {date, amount}, convert back to [date, amount]
+  const normalized = (extras || []).map(x => Array.isArray(x) ? x : [x.date, x.amount]);
+  EXTRAS = normalized.filter(x => !ORIG.has(x[0]));
   DATA = [...ORIG_DATA, ...EXTRAS];
   DATA.sort((a, b) => a[0].localeCompare(b[0]));
 }
