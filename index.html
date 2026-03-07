@@ -306,6 +306,7 @@ const ORIG_DATA = [
 const ORIG = new Set(ORIG_DATA.map(d => d[0]));
 const SACHETS = 5;
 let DATA = [...ORIG_DATA];
+let EXTRAS = [];
 let J_LOG = [];
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -315,18 +316,18 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const REF_A = doc(db, 'tracker', 'achats');
 const REF_J = doc(db, 'tracker', 'jlog');
-async function saveA() { const extras = DATA.filter(d => !ORIG.has(d[0])); await setDoc(REF_A, { entries: extras }); }
+async function saveExtras() { await setDoc(REF_A, { entries: EXTRAS }); }
 async function saveJ() { await setDoc(REF_J, { log: J_LOG }); }
 
 function mergeData(extras) {
-  DATA = [...ORIG_DATA];
-  if (extras) extras.forEach(x => { if (!ORIG.has(x[0])) DATA.push(x); });
+  EXTRAS = (extras || []).filter(x => !ORIG.has(x[0]));
+  DATA = [...ORIG_DATA, ...EXTRAS];
   DATA.sort((a, b) => a[0].localeCompare(b[0]));
 }
 
 function startListeners() {
-  onSnapshot(REF_A, snap => { const d = snap.data(); mergeData(d ? d.entries : []); renderAchats(false); });
-  onSnapshot(REF_J, snap => { const d = snap.data(); J_LOG = d ? (d.log || []) : []; renderJ(); });
+  onSnapshot(REF_A, snap => { mergeData(snap.data()?.entries); renderAchats(false); });
+  onSnapshot(REF_J, snap => { J_LOG = snap.data()?.log || []; renderJ(); });
 }
 
 function fmt(s) { const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; }
@@ -485,11 +486,11 @@ function renderJ() {
   }
 }
 
-window._del = async function(dateStr) {
+window._del = function(dateStr) {
   if(ORIG.has(dateStr)) return toast('Impossible de supprimer un achat d\'origine.',1);
   const idx=DATA.findIndex(d=>d[0]===dateStr);
   if(idx===-1) return;
-  DATA.splice(idx,1); await saveA();
+  DATA.splice(idx,1); saveA();
   toast('Achat du '+fmt(dateStr)+' supprimé.');
 };
 window.addExpense = async function() {
@@ -497,9 +498,12 @@ window.addExpense = async function() {
   const a=parseFloat(document.getElementById('inAmt').value);
   if(!d||isNaN(a)||a<=0) return toast('Remplis la date et le montant.',1);
   if(DATA.find(x=>x[0]===d)) return toast('Cette date existe déjà.',1);
+  if(!ORIG.has(d)) EXTRAS.push([d,a]);
   DATA.push([d,a]); DATA.sort((a,b)=>a[0].localeCompare(b[0]));
-  await saveA(); document.getElementById('inAmt').value='200'; setDate();
+  renderAchats(true);
+  document.getElementById('inAmt').value='200'; setDate();
   toast(`✓ ${a}€ le ${fmt(d)} ajouté !`);
+  await saveExtras();
 };
 window.addJ = async function() {
   const sachet=currentSachetIdx();
