@@ -37,6 +37,14 @@ header { display:flex; justify-content:space-between; align-items:center; margin
 .section-label { font-size:11px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--blue); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
 .section-label::after { content:''; flex:1; height:1px; background:var(--border); }
 
+/* TABS */
+.tabs { display:flex; gap:4px; margin-bottom:32px; background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:4px; }
+.tab { flex:1; padding:10px 16px; border:none; border-radius:10px; font-family:'Poppins',sans-serif; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s; background:transparent; color:var(--muted); }
+.tab.active { background:var(--blue); color:#fff; box-shadow:0 4px 12px rgba(58,134,255,0.3); }
+.tab:hover:not(.active) { color:var(--text); background:var(--bg3); }
+.tab-panel { display:none; }
+.tab-panel.active { display:block; }
+
 /* STATS */
 .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
 .stat { background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:18px 16px; transition:border-color 0.2s,transform 0.2s; cursor:default; }
@@ -218,6 +226,8 @@ tbody tr.selected .del-circle { display:flex; }
   .j-log-item { font-size:10px; }
   .j-log-title { font-size:9px; }
   .toast { bottom:14px; right:14px; left:14px; font-size:11px; padding:12px 14px; }
+  .tabs { margin-bottom:20px; border-radius:12px; }
+  .tab { font-size:12px; padding:8px 10px; }
 }
 </style>
 </head>
@@ -239,8 +249,14 @@ tbody tr.selected .del-circle { display:flex; }
     </div>
   </header>
 
-  <!-- CONSOMMATION J -->
-  <div class="section-label" style="color:var(--green)">Consommation · J</div>
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" id="tab-btn-conso" onclick="switchTab('conso')">🌿 Consommation</button>
+    <button class="tab" id="tab-btn-achat" onclick="switchTab('achat')">💸 Achats</button>
+  </div>
+
+  <!-- CONSOMMATION PANEL -->
+  <div class="tab-panel active" id="panel-conso">
   <div class="j-stats">
     <div class="stat"><div class="stat-icon green">🌿</div><div class="stat-lbl">Total J</div><div class="stat-val green" id="jTotal">0</div><div class="stat-hint">consommations</div></div>
     <div class="stat"><div class="stat-icon green">📦</div><div class="stat-lbl">J par sachet</div><div class="stat-val green" id="jPerSachet">—</div><div class="stat-hint">moy. sachets finis</div></div>
@@ -271,9 +287,10 @@ tbody tr.selected .del-circle { display:flex; }
       <div class="j-log-list" id="jLogList"></div>
     </div>
   </div>
+  </div><!-- /panel-conso -->
 
-  <!-- ACHATS -->
-  <div class="section-label">Achats</div>
+  <!-- ACHATS PANEL -->
+  <div class="tab-panel" id="panel-achat">
   <div class="stats">
     <div class="stat"><div class="stat-icon yellow">💸</div><div class="stat-lbl">Total dépensé</div><div class="stat-val yellow" id="sTotal">—</div><div class="stat-hint" id="sCount"></div></div>
     <div class="stat"><div class="stat-icon blue">📅</div><div class="stat-lbl">Moy. intervalle</div><div class="stat-val blue" id="sAvg">—</div><div class="stat-hint">jours entre achats</div></div>
@@ -312,6 +329,7 @@ tbody tr.selected .del-circle { display:flex; }
       <tbody id="tbody"></tbody>
     </table>
   </div>
+  </div><!-- /panel-achat -->
 </div>
 
 <div class="toast" id="toast"></div>
@@ -591,6 +609,13 @@ window.undoJ = async function() {
   toast(last.type==='fin'?`Sachet ${last.sachet} réouvert.`:'Dernier J annulé.');
 };
 
+window.switchTab = function(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  document.getElementById('tab-btn-'+name).classList.add('active');
+  if(name === 'achat') renderAchats(false);
+};
 function setDate() {
   const t=new Date();
   document.getElementById('inDate').value=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
@@ -604,7 +629,7 @@ window.toast = function(msg,err=0,isJ=0) {
   tt=setTimeout(()=>el.className='toast',3000);
 };
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.closest('.add-form')) window.addExpense();});
-window.addEventListener('resize',()=>renderAchats(false));
+window.addEventListener('resize',()=>{ if(document.getElementById('panel-achat').classList.contains('active')) renderAchats(false); });
 document.getElementById('headerMeta').textContent='Connexion…';
 setDate();
 startListeners();
