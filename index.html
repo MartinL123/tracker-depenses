@@ -147,6 +147,12 @@ td:last-child { text-align:right; }
 .j-log-item:last-child { border-bottom:none; }
 .j-log-item .j-num { color:var(--green); font-weight:600; }
 .j-log-item .j-time { color:var(--muted2); }
+.j-log-right { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.j-delta { font-size:10px; font-weight:500; color:var(--muted2); background:var(--bg3); border:1px solid var(--border); padding:1px 7px; border-radius:6px; white-space:nowrap; }
+.j-time.editable { cursor:pointer; text-decoration:underline; text-decoration-style:dotted; text-underline-offset:2px; }
+.j-time.editable:hover { color:var(--blue); }
+.j-since-last { font-size:12px; font-weight:600; color:var(--muted); margin-top:-4px; }
+.j-time-input { background:var(--bg3); border:1px solid var(--blue); color:var(--text); font-family:'Poppins',sans-serif; font-size:11px; font-weight:500; padding:2px 8px; border-radius:6px; outline:none; width:148px; }
 @keyframes fadeIn { from{opacity:0;transform:translateX(-4px);}to{opacity:1;transform:none;} }
 
 /* CLICK TO REVEAL DELETE BUTTON */
@@ -278,6 +284,7 @@ tbody tr.selected .del-circle { display:flex; }
     <div class="j-center">
       <button class="btn-j" onclick="addJ()" id="btnJ">J</button>
       <span class="btn-j-hint">Appuie à chaque consommation</span>
+      <span id="jSinceLast" class="j-since-last"></span>
     </div>
     <div class="j-actions">
       <button class="btn-undo" onclick="undoJ()">↩ Annuler le dernier J</button>
@@ -384,6 +391,7 @@ function startListeners() {
 
 function fmt(s) { const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; }
 function fmtTs(iso) { const d=new Date(iso); return d.toLocaleDateString('fr-FR')+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
+function fmtDelta(ms) { const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000); if(h===0) return `${m}m`; if(m===0) return `${h}h`; return `${h}h${String(m).padStart(2,'0')}`; }
 function since(s) { return Math.round((Date.now()-new Date(s))/86400000); }
 function rows() {
   return DATA.map((d,i) => ({
@@ -535,13 +543,22 @@ function renderJ() {
     else { html+=`<div class="sachet-sub">J en cours</div>`; html+=`<button class="btn-finish" onclick="window._finishSachet()">Finir le sachet</button>`; }
     el.innerHTML=html; row.appendChild(el);
   });
+  const jSorted=J_LOG.filter(e=>e.type==='j').sort((a,b)=>new Date(a.ts)-new Date(b.ts));
+  const deltaMap={};
+  for(let i=1;i<jSorted.length;i++) deltaMap[jSorted[i].ts]=new Date(jSorted[i].ts)-new Date(jSorted[i-1].ts);
+  const sinceEl=document.getElementById('jSinceLast');
+  if(sinceEl) sinceEl.textContent=jSorted.length?'il y a '+fmtDelta(Date.now()-new Date(jSorted[jSorted.length-1].ts)):'';
   const logEl=document.getElementById('jLogList');
   if(!J_LOG.length){
     logEl.innerHTML=`<div class="j-log-item" style="justify-content:center;color:var(--muted)">Aucun J enregistré</div>`;
   } else {
-    logEl.innerHTML=[...J_LOG].reverse().slice(0,30).map(e=>{
+    const displayLog=[...J_LOG].reverse().slice(0,30);
+    logEl.innerHTML=displayLog.map((e,ri)=>{
+      const origIdx=J_LOG.length-1-ri;
       if(e.type==='fin') return `<div class="j-log-item"><span style="color:var(--green);font-weight:600">✓ Sachet ${e.sachet} terminé</span><span class="j-time">${fmtTs(e.ts)}</span></div>`;
-      return `<div class="j-log-item"><span class="j-num">J · Sachet ${e.sachet}</span><span class="j-time">${fmtTs(e.ts)}</span></div>`;
+      const delta=deltaMap[e.ts];
+      const deltaHtml=delta!==undefined?`<span class="j-delta">+${fmtDelta(delta)}</span>`:'';
+      return `<div class="j-log-item"><span class="j-num">J · Sachet ${e.sachet}</span><div class="j-log-right">${deltaHtml}<span class="j-time editable" data-idx="${origIdx}">${fmtTs(e.ts)}</span></div></div>`;
     }).join('');
   }
 }
@@ -630,6 +647,29 @@ window.toast = function(msg,err=0,isJ=0) {
 };
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.closest('.add-form')) window.addExpense();});
 window.addEventListener('resize',()=>{ if(document.getElementById('panel-achat').classList.contains('active')) renderAchats(false); });
+document.getElementById('jLogList').addEventListener('click', e => {
+  const el=e.target.closest('.j-time.editable');
+  if(!el) return;
+  const idx=parseInt(el.dataset.idx);
+  const entry=J_LOG[idx];
+  if(!entry||entry.type!=='j') return;
+  const dt=new Date(entry.ts);
+  const local=new Date(dt.getTime()-dt.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  const input=document.createElement('input');
+  input.type='datetime-local'; input.value=local; input.className='j-time-input';
+  el.replaceWith(input); input.focus();
+  let done=false;
+  const commit=async()=>{
+    if(done) return; done=true;
+    if(input.value){ J_LOG[idx].ts=new Date(input.value).toISOString(); await saveJ(); toast('Heure modifiée ✓',0,1); }
+    renderJ();
+  };
+  input.addEventListener('blur',commit);
+  input.addEventListener('keydown',ke=>{
+    if(ke.key==='Enter'){ke.preventDefault();input.blur();}
+    if(ke.key==='Escape'){done=true;renderJ();}
+  });
+});
 document.getElementById('headerMeta').textContent='Connexion…';
 setDate();
 startListeners();
