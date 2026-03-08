@@ -326,10 +326,8 @@ const ORIG_DATA = [
   ['2026-02-04', 200], ['2026-02-14', 200], ['2026-02-25', 200],
   ['2026-03-07', 200],
 ];
-const ORIG = new Set(ORIG_DATA.map(d => d[0]));
 const SACHETS = 5;
-let DATA = [...ORIG_DATA];
-let EXTRAS = [];
+let DATA = [];
 let J_LOG = [];
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -339,19 +337,29 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const REF_A = doc(db, 'tracker', 'achats');
 const REF_J = doc(db, 'tracker', 'jlog');
-async function saveExtras() { await setDoc(REF_A, { entries: EXTRAS.map(e => ({date: e[0], amount: e[1]})) }); }
-async function saveJ() { await setDoc(REF_J, { log: J_LOG }); }
+async function saveAchats() {
+  try { await setDoc(REF_A, { entries: DATA.map(e => ({date:e[0],amount:e[1]})) }); }
+  catch(e) { toast('Erreur sauvegarde Firebase.',1); }
+}
+async function saveJ() {
+  try { await setDoc(REF_J, { log: J_LOG }); }
+  catch(e) { toast('Erreur sauvegarde Firebase.',1); }
+}
 
-function mergeData(extras) {
-  const normalized = (extras || []).map(x => Array.isArray(x) ? x : [x.date, x.amount]);
-  EXTRAS = normalized.filter(x => !ORIG.has(x[0]));
-  DATA = [...ORIG_DATA, ...EXTRAS];
+function setData(entries) {
+  DATA = (entries || []).map(x => Array.isArray(x) ? x : [x.date, x.amount]);
   DATA.sort((a, b) => a[0].localeCompare(b[0]));
 }
 
 function startListeners() {
-  onSnapshot(REF_A, snap => { mergeData(snap.data()?.entries); renderAchats(false); });
-  onSnapshot(REF_J, snap => { J_LOG = snap.data()?.log || []; renderJ(); });
+  onSnapshot(REF_A, async snap => {
+    const entries = snap.data()?.entries;
+    if (!entries || !entries.length) { setData(ORIG_DATA); renderAchats(false); await saveAchats(); }
+    else { setData(entries); renderAchats(false); }
+  }, () => toast('Connexion Firebase perdue.',1));
+  onSnapshot(REF_J, snap => {
+    J_LOG = snap.data()?.log || []; renderJ();
+  }, () => toast('Connexion Firebase perdue.',1));
 }
 
 function fmt(s) { const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; }
@@ -399,7 +407,7 @@ function renderAchats(hl) {
   document.getElementById('tbody').innerHTML = [...R].reverse().map((r,i)=>{
     const pill = r.days===null ? `<span class="badge n">—</span>`
       : `<span class="badge ${r.days>=20?'g':r.days>=10?'o':'r'}">${r.days>=20?'↑':r.days>=10?'→':'↓'} ${r.days}j</span>`;
-    const canDel = !ORIG.has(r.dateStr);
+    const canDel = true;
     const delCircle = canDel ? `<button class="del-circle" onclick="window._del('${r.dateStr}')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>` : '';
     const trClass = [hl&&i===0?'tr-new':'', canDel?'deletable':''].filter(Boolean).join(' ');
     const attr = canDel ? ` data-date="${r.dateStr}"` : '';
@@ -536,9 +544,8 @@ window._del = function(dateStr) {
     tr.style.opacity='0';
   }
   setTimeout(async ()=>{
-    EXTRAS = EXTRAS.filter(d=>d[0]!==dateStr);
     DATA = DATA.filter(d=>d[0]!==dateStr);
-    await saveExtras();
+    await saveAchats();
     renderAchats(false);
     toast('Achat supprimé ✓');
   },150);
@@ -548,12 +555,11 @@ window.addExpense = async function() {
   const a=parseFloat(document.getElementById('inAmt').value);
   if(!d||isNaN(a)||a<=0) return toast('Remplis la date et le montant.',1);
   if(DATA.find(x=>x[0]===d)) return toast('Cette date existe déjà.',1);
-  if(!ORIG.has(d)) EXTRAS.push([d,a]);
   DATA.push([d,a]); DATA.sort((a,b)=>a[0].localeCompare(b[0]));
   renderAchats(true);
   document.getElementById('inAmt').value='200'; setDate();
   toast(`✓ ${a}€ le ${fmt(d)} ajouté !`);
-  await saveExtras();
+  await saveAchats();
 };
 window.addJ = async function() {
   const sachet=currentSachetIdx();
