@@ -57,14 +57,18 @@ header { display:flex; justify-content:space-between; align-items:center; margin
 /* CHART */
 #chartCanvas { width:100%; display:block; }
 
-/* MONTHLY BARS */
-.month-cols { display:grid; grid-template-columns:repeat(6,1fr); gap:10px; }
-.month-col { text-align:center; }
-.month-bar-wrap { height:60px; display:flex; align-items:flex-end; justify-content:center; margin-bottom:6px; }
-.month-bar { width:28px; border-radius:6px 6px 0 0; background:linear-gradient(180deg,var(--blue) 0%,rgba(58,134,255,0.5) 100%); transition:opacity 0.2s; opacity:0.7; }
-.month-bar:hover { opacity:1; }
-.month-lbl { font-size:10px; color:var(--muted); font-weight:500; }
-.month-val { font-size:10px; color:var(--text); font-weight:600; margin-top:2px; }
+/* MONTHLY TABLE */
+.month-year-group { margin-bottom:16px; }
+.month-year-group:last-child { margin-bottom:0; }
+.month-year-header { display:flex; justify-content:space-between; align-items:center; padding-bottom:8px; margin-bottom:6px; border-bottom:1px solid var(--border); }
+.month-year-label { font-size:11px; font-weight:700; color:var(--blue); text-transform:uppercase; letter-spacing:0.1em; }
+.month-year-total { font-size:11px; font-weight:600; color:var(--text); }
+.month-row { display:flex; align-items:center; gap:10px; padding:4px 0; }
+.month-row-lbl { font-size:11px; font-weight:500; color:var(--muted); width:26px; flex-shrink:0; }
+.month-row-bar-wrap { flex:1; height:5px; background:var(--bg3); border-radius:3px; overflow:hidden; }
+.month-row-bar { height:100%; background:var(--blue); border-radius:3px; opacity:0.55; transition:opacity 0.2s; }
+.month-row:hover .month-row-bar { opacity:1; }
+.month-row-val { font-size:11px; font-weight:600; color:var(--text); width:38px; text-align:right; flex-shrink:0; }
 
 /* ADD FORM */
 .add-card { border-color:rgba(58,134,255,0.3); }
@@ -196,10 +200,8 @@ tbody tr.selected .del-circle { display:flex; }
   .add-form .btn-add { grid-column:span 2; width:100%; height:44px; font-size:20px; border-radius:10px; }
   .fg label { font-size:9px; }
   .fg input { font-size:13px; padding:10px 12px; }
-  .month-cols { grid-template-columns:repeat(3,1fr); gap:5px; }
-  .month-bar-wrap { height:40px; }
-  .month-bar { width:20px; }
-  .month-lbl, .month-val { font-size:8px; }
+  .month-row-lbl { font-size:10px; }
+  .month-row-val { font-size:10px; }
   table { font-size:12px; }
   th { font-size:9px; padding-bottom:8px; }
   td { padding:10px 0; font-size:12px; }
@@ -399,10 +401,15 @@ function renderAchats(hl) {
   const mmax=Math.max(...mvals);
   document.getElementById('monthlyTotal').textContent = mvals.reduce((a,b)=>a+b,0).toLocaleString('fr-FR')+'€ total';
   const mn=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-  document.getElementById('monthCols').innerHTML = mkeys.map((k,i)=>{
-    const h=Math.max(4,Math.round((mvals[i]/mmax)*56));
-    const [,m]=k.split('-');
-    return `<div class="month-col"><div class="month-bar-wrap"><div class="month-bar" style="height:${h}px"></div></div><div class="month-lbl">${mn[parseInt(m)-1]}</div><div class="month-val">${mvals[i]}€</div></div>`;
+  const years={};
+  mkeys.forEach((k,i)=>{ const [y,m]=k.split('-'); if(!years[y]) years[y]=[]; years[y].push({lbl:mn[parseInt(m)-1],val:mvals[i]}); });
+  document.getElementById('monthCols').innerHTML = Object.keys(years).sort().reverse().map(y=>{
+    const yTotal=years[y].reduce((s,x)=>s+x.val,0);
+    const rows=years[y].map(({lbl,val})=>{
+      const pct=Math.round((val/mmax)*100);
+      return `<div class="month-row"><span class="month-row-lbl">${lbl}</span><div class="month-row-bar-wrap"><div class="month-row-bar" style="width:${pct}%"></div></div><span class="month-row-val">${val}€</span></div>`;
+    }).join('');
+    return `<div class="month-year-group"><div class="month-year-header"><span class="month-year-label">${y}</span><span class="month-year-total">${yTotal.toLocaleString('fr-FR')}€</span></div>${rows}</div>`;
   }).join('');
   document.getElementById('tbody').innerHTML = [...R].reverse().map((r,i)=>{
     const pill = r.days===null ? `<span class="badge n">—</span>`
