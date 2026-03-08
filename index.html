@@ -131,6 +131,7 @@ td:last-child { text-align:right; }
 .sachet-big.done { color:var(--muted); }
 .sachet-sub { font-size:9px; color:var(--muted); font-weight:500; }
 .sachet-sub.done-lbl { color:var(--green); font-weight:600; }
+.sachet-total { font-size:10px; font-weight:500; color:var(--muted); margin-top:1px; }
 .btn-finish { margin-top:4px; background:transparent; border:1px solid rgba(97,209,128,0.35); color:var(--green); font-family:'Poppins',sans-serif; font-size:9px; font-weight:600; padding:4px 8px; border-radius:6px; cursor:pointer; transition:all 0.2s; text-transform:uppercase; letter-spacing:0.04em; }
 .btn-finish:hover { background:rgba(97,209,128,0.15); border-color:var(--green); }
 
@@ -391,6 +392,7 @@ function startListeners() {
 
 function fmt(s) { const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; }
 function fmtTs(iso) { const d=new Date(iso); return d.toLocaleDateString('fr-FR')+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
+function todayStart() { const now=new Date(),d=new Date(now); d.setHours(8,0,0,0); if(d>now) d.setDate(d.getDate()-1); return d; }
 function fmtDelta(ms) { const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000); if(h===0) return `${m}m`; if(m===0) return `${h}h`; return `${h}h${String(m).padStart(2,'0')}`; }
 function since(s) { return Math.round((Date.now()-new Date(s))/86400000); }
 function rows() {
@@ -538,9 +540,16 @@ function renderJ() {
     const el=document.createElement('div');
     el.className='sachet'+(s.closed?' done':' active');
     let html=`<div class="sachet-num">Sachet ${s.idx}</div>`;
-    html+=`<div class="sachet-big${s.closed?' done':''}">${s.js.length}</div>`;
-    if(s.closed){ html+=`<div class="sachet-sub done-lbl">✓ Fini</div>`; }
-    else { html+=`<div class="sachet-sub">J en cours</div>`; html+=`<button class="btn-finish" onclick="window._finishSachet()">Finir le sachet</button>`; }
+    if(s.closed){
+      html+=`<div class="sachet-big done">${s.js.length}</div>`;
+      html+=`<div class="sachet-sub done-lbl">✓ Fini</div>`;
+    } else {
+      const todayJs=s.js.filter(ts=>new Date(ts)>=todayStart()).length;
+      html+=`<div class="sachet-big">${todayJs}</div>`;
+      html+=`<div class="sachet-sub">J aujourd'hui</div>`;
+      html+=`<div class="sachet-total">${s.js.length} J total</div>`;
+      html+=`<button class="btn-finish" onclick="window._finishSachet()">Finir le sachet</button>`;
+    }
     el.innerHTML=html; row.appendChild(el);
   });
   const jSorted=J_LOG.filter(e=>e.type==='j').sort((a,b)=>new Date(a.ts)-new Date(b.ts));
