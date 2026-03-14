@@ -159,11 +159,13 @@ td:last-child { text-align:right; }
 .insight-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; margin-top:16px; }
 .insight-row .insight-lbl { margin-bottom:0; margin-top:0; }
 .insight-global-avg { font-size:11px; font-weight:700; color:var(--text); }
-.hour-hist { display:flex; align-items:flex-end; gap:2px; margin-bottom:16px; }
-.h-col { flex:1; display:flex; flex-direction:column; align-items:center; min-width:0; cursor:default; }
+.hour-hist { display:flex; align-items:flex-end; gap:2px; margin-bottom:4px; }
+.h-col { flex:1; display:flex; flex-direction:column; align-items:center; min-width:0; cursor:pointer; }
 .h-bar { width:100%; border-radius:2px 2px 0 0; background:rgba(58,134,255,0.45); transition:background 0.15s; }
 .h-bar.peak { background:var(--blue); }
-.h-col:hover .h-bar { background:var(--blue); }
+.h-col:hover .h-bar, .h-col.active .h-bar { background:var(--blue); }
+.h-col.active .h-bar { box-shadow:0 0 8px rgba(58,134,255,0.5); }
+.hour-info { font-size:11px; font-weight:600; color:var(--text); text-align:center; height:18px; line-height:18px; margin-bottom:12px; }
 .h-lbl { font-size:8px; color:var(--muted); height:14px; line-height:14px; text-align:center; width:100%; }
 .dot-legend { display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
 .dot-legend span { display:inline-flex; align-items:center; gap:4px; font-size:9px; color:var(--muted); font-weight:500; }
@@ -190,10 +192,11 @@ td:last-child { text-align:right; }
 .day-bar-chart::-webkit-scrollbar { height:3px; }
 .day-bar-chart::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 .db-col { flex:0 0 18px; display:flex; flex-direction:column; align-items:center; cursor:default; }
-.db-val { font-size:9px; font-weight:700; color:var(--text); height:14px; line-height:14px; text-align:center; }
-.db-bar { width:100%; border-radius:3px 3px 0 0; background:rgba(58,134,255,0.5); transition:background 0.15s; }
+.db-bar { width:100%; border-radius:3px 3px 0 0; background:rgba(58,134,255,0.5); transition:background 0.15s; display:flex; align-items:center; justify-content:center; overflow:hidden; }
 .db-bar.today { background:var(--blue); }
 .db-bar.zero { background:var(--bg3); opacity:0.5; }
+.db-bar-val { font-size:8px; font-weight:700; color:#fff; line-height:1; }
+.db-week-sep { width:1px; flex-shrink:0; align-self:stretch; background:rgba(46,46,46,0.9); margin:0 1px; }
 .db-col:hover .db-bar:not(.zero) { background:var(--blue); }
 .db-lbl { font-size:8px; color:var(--muted); height:14px; line-height:14px; text-align:center; width:100%; overflow:hidden; }
 /* WEEK AVG */
@@ -332,6 +335,7 @@ tbody tr.selected .del-circle { display:flex; }
     </div>
     <div class="insight-lbl">Répartition horaire</div>
     <div class="hour-hist" id="hourHist"></div>
+    <div class="hour-info" id="hourInfo"></div>
     <div class="insight-lbl">J par jour</div>
     <div class="day-bar-chart" id="dayBarChart"></div>
     <div class="insight-row">
@@ -599,25 +603,51 @@ function renderInsight() {
   const lastEl = document.getElementById('insightTodayLast');
   if (valEl) valEl.textContent = todayJ;
   if (lastEl) lastEl.textContent = lastJ ? 'il y a '+fmtDelta(Date.now()-new Date(lastJ.ts)) : '—';
-  // Hourly histogram
-  const hCnt = new Array(24).fill(0);
-  jEntries.forEach(e => { hCnt[new Date(e.ts).getHours()]++; });
-  const maxH = Math.max(...hCnt, 1);
+  // Total days in range (for hourly avg)
+  const todayAncH = todayStart();
+  let totalDays = 1;
+  if (jEntries.length) {
+    const firstTs = jEntries.reduce((a,b) => new Date(a.ts)<new Date(b.ts)?a:b).ts;
+    const fd = new Date(firstTs); const fa = new Date(fd); fa.setHours(8,0,0,0);
+    if (fd < fa) fa.setDate(fa.getDate()-1);
+    totalDays = Math.max(1, Math.round((todayAncH - fa) / 86400000) + 1);
+  }
+  // Hourly histogram — probability (% of days with ≥1 J in this hour)
+  const hDays = new Array(24).fill(0);
+  const seenDayH = new Set();
+  jEntries.forEach(e => {
+    const d = new Date(e.ts), h = d.getHours();
+    const anc = new Date(d); anc.setHours(8,0,0,0);
+    if (d < anc) anc.setDate(anc.getDate()-1);
+    const key = anc.toISOString().slice(0,10) + '_' + h;
+    if (!seenDayH.has(key)) { seenDayH.add(key); hDays[h]++; }
+  });
+  const hProb = hDays.map(d => totalDays > 0 ? Math.round(d / totalDays * 100) : 0);
+  const maxH = Math.max(...hProb, 1);
   const histEl = document.getElementById('hourHist');
   if (histEl) {
     const hrs = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23];
     const AVAIL = 52;
     histEl.innerHTML = hrs.map(h => {
-      const cnt = hCnt[h];
-      const barH = Math.max(2, Math.round((cnt/maxH)*AVAIL));
+      const prob = hProb[h];
+      const barH = Math.max(2, Math.round((prob/maxH)*AVAIL));
       const spH = AVAIL - barH;
       const lbl = [0,6,12,18].includes(h) ? h+'h' : '';
-      return `<div class="h-col" title="${h}h : ${cnt} J">
+      return `<div class="h-col" data-hour="${h}" data-prob="${prob}">
         <div style="height:${spH}px"></div>
-        <div class="h-bar${cnt===maxH?' peak':''}" style="height:${barH}px"></div>
+        <div class="h-bar${prob===maxH?' peak':''}" style="height:${barH}px"></div>
         <span class="h-lbl">${lbl}</span>
       </div>`;
     }).join('');
+    const infoEl = document.getElementById('hourInfo');
+    histEl.querySelectorAll('.h-col').forEach(col => {
+      col.addEventListener('click', () => {
+        histEl.querySelectorAll('.h-col').forEach(c => c.classList.remove('active'));
+        col.classList.add('active');
+        const h = col.dataset.hour, prob = col.dataset.prob;
+        if (infoEl) infoEl.textContent = `${h}h–${+h+1}h — ${prob}% des jours`;
+      });
+    });
   }
   // Day bar chart (8am→8am days)
   const dayMap = {};
@@ -646,19 +676,20 @@ function renderInsight() {
     const key = cur.toISOString().slice(0,10);
     const count = dayMap[key] || 0;
     const isToday = cur.getTime() === todayAnc.getTime();
+    const isMonday = cur.getDay() === 1 && cols.length > 0;
     const lbl = isToday ? 'Auj.' : `${cur.getDate()}/${cur.getMonth()+1}`;
-    cols.push({ count, lbl, isToday });
+    cols.push({ count, lbl, isToday, isMonday });
     cur.setDate(cur.getDate()+1);
   }
   const maxC = Math.max(...cols.map(c => c.count), 1);
-  chartEl.innerHTML = cols.map(({ count, lbl, isToday }) => {
-    const barH = count ? Math.max(4, Math.round((count/maxC)*AVAIL)) : 3;
+  chartEl.innerHTML = cols.map(({ count, lbl, isToday, isMonday }) => {
+    const barH = count ? Math.max(14, Math.round((count/maxC)*AVAIL)) : 3;
     const spH = AVAIL - barH;
     const barCls = isToday ? ' today' : count===0 ? ' zero' : '';
-    return `<div class="db-col">
-      <span class="db-val">${count||''}</span>
+    const sep = isMonday ? '<div class="db-week-sep"></div>' : '';
+    return `${sep}<div class="db-col">
       <div style="height:${spH}px"></div>
-      <div class="db-bar${barCls}" style="height:${barH}px"></div>
+      <div class="db-bar${barCls}" style="height:${barH}px"><span class="db-bar-val">${count||''}</span></div>
       <span class="db-lbl">${lbl}</span>
     </div>`;
   }).join('');
@@ -730,10 +761,8 @@ function renderJ() {
       html+=`<div class="sachet-big done">${s.js.length}</div>`;
       html+=`<div class="sachet-sub done-lbl">✓ Fini</div>`;
     } else {
-      const todayJs=s.js.filter(ts=>new Date(ts)>=todayStart()).length;
-      html+=`<div class="sachet-big">${todayJs}</div>`;
-      html+=`<div class="sachet-sub">J aujourd'hui</div>`;
-      html+=`<div class="sachet-total">${s.js.length} J total</div>`;
+      html+=`<div class="sachet-big">${s.js.length}</div>`;
+      html+=`<div class="sachet-sub">J ce sachet</div>`;
       html+=`<button class="btn-finish" onclick="window._finishSachet()">Finir le sachet</button>`;
     }
     el.innerHTML=html; row.appendChild(el);
