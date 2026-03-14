@@ -21,7 +21,7 @@ body::before {
   background-image: linear-gradient(rgba(58,134,255,0.04) 1px,transparent 1px), linear-gradient(90deg,rgba(58,134,255,0.04) 1px,transparent 1px);
   background-size:40px 40px; pointer-events:none; z-index:0;
 }
-.app { position:relative; z-index:1; max-width:900px; margin:0 auto; padding:40px 24px 80px; }
+.app { position:relative; z-index:1; max-width:900px; margin:0 auto; padding:40px 24px 180px; }
 
 /* HEADER */
 header { display:flex; justify-content:space-between; align-items:center; margin-bottom:48px; padding-bottom:24px; border-bottom:1px solid var(--border); }
@@ -111,11 +111,15 @@ td:last-child { text-align:right; }
 /* J SECTION */
 .j-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
 .j-card { border-color:rgba(97,209,128,0.25); }
-.j-center { display:flex; flex-direction:column; align-items:center; gap:12px; margin-bottom:24px; }
-.btn-j { width:110px; height:110px; border-radius:50%; background:linear-gradient(135deg,rgba(97,209,128,0.15),rgba(97,209,128,0.05)); border:2px solid rgba(97,209,128,0.4); color:var(--green); font-family:'Poppins',sans-serif; font-size:40px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.18s cubic-bezier(.34,1.56,.64,1); user-select:none; box-shadow:0 0 0 0 rgba(97,209,128,0); }
-.btn-j:hover { background:linear-gradient(135deg,rgba(97,209,128,0.25),rgba(97,209,128,0.1)); border-color:var(--green); transform:scale(1.06); box-shadow:0 0 30px rgba(97,209,128,0.2); }
-.btn-j:active { transform:scale(0.92); }
-.btn-j-hint { font-size:11px; font-weight:500; color:var(--muted); }
+.btn-j { width:72px; height:72px; border-radius:50%; background:#1a2e21; border:2px solid rgba(97,209,128,0.55); color:var(--green); font-family:'Poppins',sans-serif; font-size:26px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.18s cubic-bezier(.34,1.56,.64,1); user-select:none; box-shadow:0 0 24px rgba(97,209,128,0.2),0 4px 20px rgba(0,0,0,0.6); }
+.btn-j:hover { background:#213d29; border-color:var(--green); transform:scale(1.07); box-shadow:0 0 36px rgba(97,209,128,0.35),0 4px 20px rgba(0,0,0,0.6); }
+.btn-j:active { transform:scale(0.90); }
+
+/* FAB (sticky J button) */
+.fab-wrap { position:fixed; bottom:28px; right:28px; z-index:200; display:flex; flex-direction:column; align-items:center; gap:10px; }
+.fab-undo { background:#1d1d1d; border:1px solid var(--border); color:var(--muted); font-family:'Poppins',sans-serif; font-size:11px; font-weight:500; padding:7px 14px; border-radius:20px; cursor:pointer; transition:all 0.2s; box-shadow:0 4px 16px rgba(0,0,0,0.6); white-space:nowrap; }
+.fab-undo:hover { border-color:var(--red); color:var(--red); }
+.fab-since { font-size:11px; font-weight:600; color:var(--muted); text-shadow:0 1px 4px rgba(0,0,0,0.8); }
 
 /* SACHETS */
 .sachets-wrap { background:var(--bg3); border:1px solid var(--border); border-radius:14px; padding:16px 20px; margin-bottom:20px; }
@@ -135,10 +139,6 @@ td:last-child { text-align:right; }
 .btn-finish { margin-top:4px; background:transparent; border:1px solid rgba(97,209,128,0.35); color:var(--green); font-family:'Poppins',sans-serif; font-size:9px; font-weight:600; padding:4px 8px; border-radius:6px; cursor:pointer; transition:all 0.2s; text-transform:uppercase; letter-spacing:0.04em; }
 .btn-finish:hover { background:rgba(97,209,128,0.15); border-color:var(--green); }
 
-/* UNDO */
-.j-actions { display:flex; justify-content:center; }
-.btn-undo { background:transparent; border:1px solid var(--border); color:var(--muted); font-family:'Poppins',sans-serif; font-size:11px; font-weight:500; padding:8px 16px; border-radius:8px; cursor:pointer; transition:all 0.2s; }
-.btn-undo:hover { border-color:var(--red); color:var(--red); }
 
 /* J LOG */
 .j-log { margin-top:20px; border-top:1px solid var(--border); padding-top:16px; }
@@ -152,8 +152,57 @@ td:last-child { text-align:right; }
 .j-delta { font-size:10px; font-weight:500; color:var(--muted2); background:var(--bg3); border:1px solid var(--border); padding:1px 7px; border-radius:6px; white-space:nowrap; }
 .j-time.editable { cursor:pointer; text-decoration:underline; text-decoration-style:dotted; text-underline-offset:2px; }
 .j-time.editable:hover { color:var(--blue); }
-.j-since-last { font-size:12px; font-weight:600; color:var(--muted); margin-top:-4px; }
 .j-time-input { background:var(--bg3); border:1px solid var(--blue); color:var(--text); font-family:'Poppins',sans-serif; font-size:11px; font-weight:500; padding:2px 8px; border-radius:6px; outline:none; width:148px; }
+
+/* DAILY INSIGHT */
+.insight-lbl { font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px; }
+.insight-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; margin-top:16px; }
+.insight-row .insight-lbl { margin-bottom:0; margin-top:0; }
+.insight-global-avg { font-size:11px; font-weight:700; color:var(--text); }
+.hour-hist { display:flex; align-items:flex-end; gap:2px; margin-bottom:16px; }
+.h-col { flex:1; display:flex; flex-direction:column; align-items:center; min-width:0; cursor:default; }
+.h-bar { width:100%; border-radius:2px 2px 0 0; background:rgba(58,134,255,0.45); transition:background 0.15s; }
+.h-bar.peak { background:var(--blue); }
+.h-col:hover .h-bar { background:var(--blue); }
+.h-lbl { font-size:8px; color:var(--muted); height:14px; line-height:14px; text-align:center; width:100%; }
+.dot-legend { display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+.dot-legend span { display:inline-flex; align-items:center; gap:4px; font-size:9px; color:var(--muted); font-weight:500; }
+.dot-ex { display:inline-block; width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.day-rows { display:flex; flex-direction:column; gap:4px; }
+.day-row { display:flex; align-items:center; gap:8px; }
+.day-row-lbl { font-size:10px; font-weight:600; color:var(--muted); width:28px; text-align:right; flex-shrink:0; }
+.day-row-ct { font-size:10px; font-weight:700; color:var(--green); width:18px; text-align:center; flex-shrink:0; }
+.day-row-ct.zero { color:var(--muted); }
+.day-track { flex:1; height:20px; background:var(--bg3); border-radius:4px; position:relative; }
+.d-dot { position:absolute; width:7px; height:7px; border-radius:50%; top:50%; transform:translate(-50%,-50%); }
+.d-dot.c0 { background:var(--muted2); }
+.d-dot.c1 { background:var(--green); }
+.d-dot.c2 { background:var(--blue); }
+.d-dot.c3 { background:var(--yellow); }
+.d-dot.c4 { background:var(--red); }
+.day-axis { display:flex; justify-content:space-between; padding-left:54px; margin-top:4px; }
+.day-axis span { font-size:8px; color:var(--muted); }
+.insight-today { display:flex; justify-content:space-between; align-items:center; background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:16px; }
+.insight-today-val { font-size:36px; font-weight:800; color:var(--green); line-height:1; }
+.insight-today-lbl { font-size:10px; font-weight:500; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-top:3px; }
+.insight-today-delta { font-size:20px; font-weight:700; color:var(--text); margin-top:2px; }
+.day-bar-chart { display:flex; gap:3px; overflow-x:auto; scroll-behavior:smooth; padding-bottom:2px; }
+.day-bar-chart::-webkit-scrollbar { height:3px; }
+.day-bar-chart::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+.db-col { flex:0 0 18px; display:flex; flex-direction:column; align-items:center; cursor:default; }
+.db-val { font-size:9px; font-weight:700; color:var(--text); height:14px; line-height:14px; text-align:center; }
+.db-bar { width:100%; border-radius:3px 3px 0 0; background:rgba(58,134,255,0.5); transition:background 0.15s; }
+.db-bar.today { background:var(--blue); }
+.db-bar.zero { background:var(--bg3); opacity:0.5; }
+.db-col:hover .db-bar:not(.zero) { background:var(--blue); }
+.db-lbl { font-size:8px; color:var(--muted); height:14px; line-height:14px; text-align:center; width:100%; overflow:hidden; }
+/* WEEK AVG */
+.week-avg { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:8px; }
+.week-day { background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:10px 4px 8px; text-align:center; }
+.week-day.peak { border-color:rgba(254,200,75,0.4); background:rgba(254,200,75,0.05); }
+.week-day-lbl { font-size:9px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:5px; }
+.week-day-val { font-size:17px; font-weight:700; color:var(--text); line-height:1; }
+.week-day.peak .week-day-val { color:var(--yellow); }
 @keyframes fadeIn { from{opacity:0;transform:translateX(-4px);}to{opacity:1;transform:none;} }
 
 /* CLICK TO REVEAL DELETE BUTTON */
@@ -228,8 +277,8 @@ tbody tr.selected .del-circle { display:flex; }
   .sachet { min-width:calc(50% - 4px); flex:none; border-radius:10px; padding:12px 8px 8px; }
   .sachet-big { font-size:18px; }
   .sachet-num { font-size:8px; }
-  .btn-j { width:88px; height:88px; font-size:30px; }
-  .btn-j-hint { font-size:10px; }
+  .btn-j { width:64px; height:64px; font-size:22px; }
+  .fab-wrap { bottom:18px; right:16px; }
   .j-log-item { font-size:10px; }
   .j-log-title { font-size:9px; }
   .toast { bottom:14px; right:14px; left:14px; font-size:11px; padding:12px 14px; }
@@ -264,6 +313,34 @@ tbody tr.selected .del-circle { display:flex; }
 
   <!-- CONSOMMATION PANEL -->
   <div class="tab-panel active" id="panel-conso">
+
+  <!-- VISION PAR JOUR -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Vision par jour</span>
+      <span class="card-badge" id="insightDaysBadge">—</span>
+    </div>
+    <div class="insight-today">
+      <div>
+        <div class="insight-today-val" id="insightTodayVal">—</div>
+        <div class="insight-today-lbl">J aujourd'hui</div>
+      </div>
+      <div style="text-align:right">
+        <div class="insight-today-delta" id="insightTodayLast">—</div>
+        <div class="insight-today-lbl">Dernier J</div>
+      </div>
+    </div>
+    <div class="insight-lbl">Répartition horaire</div>
+    <div class="hour-hist" id="hourHist"></div>
+    <div class="insight-lbl">J par jour</div>
+    <div class="day-bar-chart" id="dayBarChart"></div>
+    <div class="insight-row">
+      <span class="insight-lbl">J moyen par jour de la semaine</span>
+      <span class="insight-global-avg" id="insightGlobalAvg"></span>
+    </div>
+    <div class="week-avg" id="weekAvg"></div>
+  </div>
+
   <div class="j-stats">
     <div class="stat"><div class="stat-icon green">🌿</div><div class="stat-lbl">Total J</div><div class="stat-val green" id="jTotal">0</div><div class="stat-hint">consommations</div></div>
     <div class="stat"><div class="stat-icon green">📦</div><div class="stat-lbl">J par sachet</div><div class="stat-val green" id="jPerSachet">—</div><div class="stat-hint">moy. sachets finis</div></div>
@@ -282,19 +359,12 @@ tbody tr.selected .del-circle { display:flex; }
       </div>
       <div class="sachets-row" id="sachetsRow"></div>
     </div>
-    <div class="j-center">
-      <button class="btn-j" onclick="addJ()" id="btnJ">J</button>
-      <span class="btn-j-hint">Appuie à chaque consommation</span>
-      <span id="jSinceLast" class="j-since-last"></span>
-    </div>
-    <div class="j-actions">
-      <button class="btn-undo" onclick="undoJ()">↩ Annuler le dernier J</button>
-    </div>
     <div class="j-log">
       <div class="j-log-title">Historique J</div>
       <div class="j-log-list" id="jLogList"></div>
     </div>
   </div>
+
   </div><!-- /panel-conso -->
 
   <!-- ACHATS PANEL -->
@@ -338,6 +408,13 @@ tbody tr.selected .del-circle { display:flex; }
     </table>
   </div>
   </div><!-- /panel-achat -->
+</div>
+
+<!-- FAB -->
+<div class="fab-wrap" id="fabWrap">
+  <button class="fab-undo" onclick="undoJ()">↩ Annuler</button>
+  <button class="btn-j" onclick="addJ()" id="btnJ">J</button>
+  <span id="jSinceLast" class="fab-since"></span>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -514,6 +591,115 @@ function getSachetsData() {
   return sachets;
 }
 
+function renderInsight() {
+  const jEntries = J_LOG.filter(e => e.type === 'j');
+  const todayJ = jEntries.filter(e => new Date(e.ts) >= todayStart()).length;
+  const lastJ = jEntries.length ? jEntries.reduce((a,b) => new Date(a.ts)>new Date(b.ts)?a:b) : null;
+  const valEl = document.getElementById('insightTodayVal');
+  const lastEl = document.getElementById('insightTodayLast');
+  if (valEl) valEl.textContent = todayJ;
+  if (lastEl) lastEl.textContent = lastJ ? 'il y a '+fmtDelta(Date.now()-new Date(lastJ.ts)) : '—';
+  // Hourly histogram
+  const hCnt = new Array(24).fill(0);
+  jEntries.forEach(e => { hCnt[new Date(e.ts).getHours()]++; });
+  const maxH = Math.max(...hCnt, 1);
+  const histEl = document.getElementById('hourHist');
+  if (histEl) {
+    const hrs = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23];
+    const AVAIL = 52;
+    histEl.innerHTML = hrs.map(h => {
+      const cnt = hCnt[h];
+      const barH = Math.max(2, Math.round((cnt/maxH)*AVAIL));
+      const spH = AVAIL - barH;
+      const lbl = [0,6,12,18].includes(h) ? h+'h' : '';
+      return `<div class="h-col" title="${h}h : ${cnt} J">
+        <div style="height:${spH}px"></div>
+        <div class="h-bar${cnt===maxH?' peak':''}" style="height:${barH}px"></div>
+        <span class="h-lbl">${lbl}</span>
+      </div>`;
+    }).join('');
+  }
+  // Day bar chart (8am→8am days)
+  const dayMap = {};
+  jEntries.forEach(e => {
+    const d = new Date(e.ts);
+    const anc = new Date(d); anc.setHours(8,0,0,0);
+    if (d < anc) anc.setDate(anc.getDate()-1);
+    const key = anc.toISOString().slice(0,10);
+    dayMap[key] = (dayMap[key]||0) + 1;
+  });
+  const chartEl = document.getElementById('dayBarChart');
+  if (!chartEl) return;
+  const todayAnc = todayStart();
+  const AVAIL = 68;
+  // Find first day ever
+  let firstAnc = new Date(todayAnc);
+  if (jEntries.length) {
+    const firstTs = jEntries.reduce((a,b) => new Date(a.ts)<new Date(b.ts)?a:b).ts;
+    const fd = new Date(firstTs); firstAnc = new Date(fd); firstAnc.setHours(8,0,0,0);
+    if (fd < firstAnc) firstAnc.setDate(firstAnc.getDate()-1);
+  }
+  // Build all days oldest→newest
+  const cols = [];
+  const cur = new Date(firstAnc);
+  while (cur <= todayAnc) {
+    const key = cur.toISOString().slice(0,10);
+    const count = dayMap[key] || 0;
+    const isToday = cur.getTime() === todayAnc.getTime();
+    const lbl = isToday ? 'Auj.' : `${cur.getDate()}/${cur.getMonth()+1}`;
+    cols.push({ count, lbl, isToday });
+    cur.setDate(cur.getDate()+1);
+  }
+  const maxC = Math.max(...cols.map(c => c.count), 1);
+  chartEl.innerHTML = cols.map(({ count, lbl, isToday }) => {
+    const barH = count ? Math.max(4, Math.round((count/maxC)*AVAIL)) : 3;
+    const spH = AVAIL - barH;
+    const barCls = isToday ? ' today' : count===0 ? ' zero' : '';
+    return `<div class="db-col">
+      <span class="db-val">${count||''}</span>
+      <div style="height:${spH}px"></div>
+      <div class="db-bar${barCls}" style="height:${barH}px"></div>
+      <span class="db-lbl">${lbl}</span>
+    </div>`;
+  }).join('');
+  // Update badge with total days
+  const badge = document.getElementById('insightDaysBadge');
+  if (badge) badge.textContent = cols.length + ' jours';
+  // Scroll to right (most recent)
+  requestAnimationFrame(() => { chartEl.scrollLeft = chartEl.scrollWidth; });
+  // Global daily average
+  const globalEl = document.getElementById('insightGlobalAvg');
+  if (globalEl && cols.length) {
+    const totalAll = cols.reduce((s,c) => s+c.count, 0);
+    const avg = (totalAll / cols.length).toFixed(1);
+    globalEl.textContent = 'Moy. J/J : ' + avg;
+  }
+  // Weekly averages (0=Mon … 6=Sun)
+  const weekEl = document.getElementById('weekAvg');
+  if (weekEl) {
+    const wTotals = new Array(7).fill(0), wOcc = new Array(7).fill(0);
+    const wc = new Date(firstAnc);
+    while (wc <= todayAnc) {
+      const dow = (wc.getDay() + 6) % 7;
+      wOcc[dow]++;
+      wTotals[dow] += dayMap[wc.toISOString().slice(0,10)] || 0;
+      wc.setDate(wc.getDate()+1);
+    }
+    const avgs = wTotals.map((t,i) => wOcc[i] ? t/wOcc[i] : 0);
+    const maxAvg = Math.max(...avgs);
+    const lbls = ['Lu','Ma','Me','Je','Ve','Sa','Di'];
+    weekEl.innerHTML = lbls.map((lbl,i) => {
+      const val = avgs[i];
+      const isPeak = val === maxAvg && maxAvg > 0;
+      const display = wOcc[i] ? (Number.isInteger(val) ? val : val.toFixed(1)) : '—';
+      return `<div class="week-day${isPeak?' peak':''}">
+        <div class="week-day-lbl">${lbl}</div>
+        <div class="week-day-val">${display}</div>
+      </div>`;
+    }).join('');
+  }
+}
+
 function renderJ() {
   const sachets=getSachetsData();
   const closed=sachets.filter(s=>s.closed);
@@ -570,6 +756,7 @@ function renderJ() {
       return `<div class="j-log-item"><span class="j-num">J · Sachet ${e.sachet}</span><div class="j-log-right">${deltaHtml}<span class="j-time editable" data-idx="${origIdx}">${fmtTs(e.ts)}</span></div></div>`;
     }).join('');
   }
+  renderInsight();
 }
 
 function attachRowListeners() {
@@ -640,6 +827,7 @@ window.switchTab = function(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
   document.getElementById('tab-btn-'+name).classList.add('active');
+  document.getElementById('fabWrap').style.display = name === 'conso' ? 'flex' : 'none';
   if(name === 'achat') renderAchats(false);
 };
 function setDate() {
