@@ -195,6 +195,7 @@ td:last-child { text-align:right; }
 .db-bar { width:100%; border-radius:3px 3px 0 0; background:rgba(58,134,255,0.5); transition:background 0.15s; display:flex; align-items:center; justify-content:center; overflow:hidden; }
 .db-bar.today { background:var(--blue); }
 .db-bar.zero { background:var(--bg3); opacity:0.5; }
+.db-bar.predicted { background:repeating-linear-gradient(45deg, rgba(97,209,128,0.4) 0 3px, rgba(97,209,128,0.15) 3px 6px); }
 .db-bar-val { font-size:8px; font-weight:700; color:#fff; line-height:1; }
 .db-week-sep { width:1px; flex-shrink:0; align-self:stretch; background:rgba(46,46,46,0.9); margin:0 1px; }
 .db-col:hover .db-bar:not(.zero) { background:var(--blue); }
@@ -207,6 +208,20 @@ td:last-child { text-align:right; }
 .week-day-val { font-size:17px; font-weight:700; color:var(--text); line-height:1; }
 .week-day.peak .week-day-val { color:var(--yellow); }
 @keyframes fadeIn { from{opacity:0;transform:translateX(-4px);}to{opacity:1;transform:none;} }
+
+/* HISTORIQUE PRÉDIT */
+.btn-hist { width:100%; margin-top:14px; background:transparent; border:1px solid rgba(58,134,255,0.35); color:var(--blue); font-family:'Poppins',sans-serif; font-size:11px; font-weight:600; padding:10px; border-radius:10px; cursor:pointer; transition:all 0.2s; text-align:center; }
+.btn-hist:hover { background:rgba(58,134,255,0.1); border-color:var(--blue); }
+.badge-pred { font-size:9px; font-weight:600; color:var(--green); background:var(--green-dim); border:1px solid rgba(97,209,128,0.3); padding:2px 7px; border-radius:10px; white-space:nowrap; }
+.badge-pred.real { color:var(--muted2); background:var(--bg3); border-color:var(--border); }
+.j-del-btn { background:transparent; border:none; color:var(--muted); font-size:12px; cursor:pointer; padding:2px 4px; border-radius:6px; transition:all 0.15s; line-height:1; flex-shrink:0; }
+.j-del-btn:hover { color:var(--red); background:var(--red-dim); }
+.day-detail { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-top:10px; }
+.day-detail-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:12px; color:var(--text); }
+.day-detail-list { display:flex; flex-direction:column; gap:2px; max-height:180px; overflow-y:auto; margin-bottom:10px; }
+.day-detail-row { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--muted2); padding:5px 0; border-bottom:1px solid rgba(46,46,46,0.5); }
+.day-detail-row:last-child { border-bottom:none; }
+.day-detail-row span:first-child { flex:1; }
 
 /* CLICK TO REVEAL DELETE BUTTON */
 .td-interval { display:flex; align-items:center; justify-content:flex-end; gap:8px; position:relative; }
@@ -338,11 +353,14 @@ tbody tr.selected .del-circle { display:flex; }
     <div class="hour-info" id="hourInfo"></div>
     <div class="insight-lbl">J par jour</div>
     <div class="day-bar-chart" id="dayBarChart"></div>
+    <div class="day-detail" id="dayDetail" style="display:none"></div>
     <div class="insight-row">
       <span class="insight-lbl">J moyen par jour de la semaine</span>
       <span class="insight-global-avg" id="insightGlobalAvg"></span>
     </div>
     <div class="week-avg" id="weekAvg"></div>
+    <div class="insight-lbl" id="peakRealInfo" style="margin-top:12px"></div>
+    <button class="btn-hist" onclick="generateHistory()">🔮 Générer l'historique (dès sept. 2024)</button>
   </div>
 
   <div class="j-stats">
@@ -436,6 +454,7 @@ const ORIG_DATA = [
   ['2026-03-07', 200],
 ];
 const SACHETS = 5;
+const HIST_START = '2024-09-01';
 let DATA = [];
 let J_LOG = [];
 
@@ -582,12 +601,13 @@ function drawChart(data) {
 
 function currentSachetIdx() {
   let idx=1;
-  for(const e of J_LOG){ if(e.type==='fin') idx++; }
+  for(const e of J_LOG){ if(e.type==='fin'&&!e.predicted) idx++; }
   return idx;
 }
 function getSachetsData() {
   const sachets=[]; let cur=null;
   for(const e of J_LOG){
+    if(e.predicted) continue;
     if(e.type==='j'){ if(!cur) cur={idx:sachets.length+1,js:[],closed:false}; cur.js.push(e.ts); }
     else if(e.type==='fin'){ if(cur){ cur.closed=true; sachets.push(cur); cur=null; } }
   }
@@ -595,8 +615,80 @@ function getSachetsData() {
   return sachets;
 }
 
+function computeRealStats() {
+  const jEntries = J_LOG.filter(e=>e.type==='j'&&!e.predicted);
+  const hProb = new Array(24).fill(0), weekAvg = new Array(7).fill(0);
+  let globalAvg = 0;
+  if (!jEntries.length) return { globalAvg, weekAvg, hProb };
+  const todayAnc = todayStart();
+  const firstTs = jEntries.reduce((a,b)=>new Date(a.ts)<new Date(b.ts)?a:b).ts;
+  const fd = new Date(firstTs); const firstAnc = new Date(fd); firstAnc.setHours(8,0,0,0);
+  if (fd < firstAnc) firstAnc.setDate(firstAnc.getDate()-1);
+  const hDays = new Array(24).fill(0);
+  const seenDayH = new Set();
+  jEntries.forEach(e => {
+    const d = new Date(e.ts), h = d.getHours();
+    const anc = new Date(d); anc.setHours(8,0,0,0);
+    if (d < anc) anc.setDate(anc.getDate()-1);
+    const key = anc.toISOString().slice(0,10) + '_' + h;
+    if (!seenDayH.has(key)) { seenDayH.add(key); hDays[h]++; }
+  });
+  const dayMap = {};
+  jEntries.forEach(e => {
+    const d = new Date(e.ts);
+    const anc = new Date(d); anc.setHours(8,0,0,0);
+    if (d < anc) anc.setDate(anc.getDate()-1);
+    const key = anc.toISOString().slice(0,10);
+    dayMap[key] = (dayMap[key]||0) + 1;
+  });
+  const wTotals = new Array(7).fill(0), wOcc = new Array(7).fill(0);
+  const wc = new Date(firstAnc);
+  let totalAll = 0, dayCount = 0;
+  while (wc <= todayAnc) {
+    const key = wc.toISOString().slice(0,10);
+    const cnt = dayMap[key] || 0;
+    const dow = (wc.getDay()+6)%7;
+    wOcc[dow]++; wTotals[dow]+=cnt;
+    totalAll += cnt; dayCount++;
+    wc.setDate(wc.getDate()+1);
+  }
+  for (let i=0;i<7;i++) weekAvg[i] = wOcc[i] ? wTotals[i]/wOcc[i] : 0;
+  globalAvg = dayCount ? totalAll/dayCount : 0;
+  for (let h=0;h<24;h++) hProb[h] = dayCount>0 ? hDays[h]/dayCount : 0;
+  return { globalAvg, weekAvg, hProb };
+}
+function poissonSample(lambda) {
+  if (lambda <= 0) return 0;
+  const L = Math.exp(-lambda);
+  let k = 0, p = 1;
+  do { k++; p *= Math.random(); } while (p > L);
+  return k - 1;
+}
+function weightedHoursPick(hProb, n) {
+  const pool = hProb.map((w,h)=>({h,w:w>0?w:0.001}));
+  const picked = [];
+  for (let i=0;i<n && pool.length;i++) {
+    const total = pool.reduce((s,x)=>s+x.w,0);
+    let r = Math.random()*total, idx = 0;
+    for (; idx<pool.length; idx++) { r -= pool[idx].w; if (r<=0) break; }
+    idx = Math.min(idx, pool.length-1);
+    picked.push(pool[idx].h);
+    pool.splice(idx,1);
+  }
+  while (picked.length < n) picked.push(Math.floor(Math.random()*24));
+  return picked;
+}
+function topHours(hProb, n) {
+  return hProb.map((w,h)=>({h,w})).sort((a,b)=>b.w-a.w).slice(0,n).map(x=>x.h);
+}
+function dayKeyOf(d) {
+  const anc = new Date(d); anc.setHours(8,0,0,0);
+  if (d < anc) anc.setDate(anc.getDate()-1);
+  return anc.toISOString().slice(0,10);
+}
+
 function renderInsight() {
-  const jEntries = J_LOG.filter(e => e.type === 'j');
+  const jEntries = J_LOG.filter(e => e.type === 'j' && !e.predicted);
   const todayJ = jEntries.filter(e => new Date(e.ts) >= todayStart()).length;
   const lastJ = jEntries.length ? jEntries.reduce((a,b) => new Date(a.ts)>new Date(b.ts)?a:b) : null;
   const valEl = document.getElementById('insightTodayVal');
@@ -658,16 +750,27 @@ function renderInsight() {
     const key = anc.toISOString().slice(0,10);
     dayMap[key] = (dayMap[key]||0) + 1;
   });
+  const predEntries = J_LOG.filter(e => e.type==='j' && e.predicted);
+  const predMap = {};
+  predEntries.forEach(e => { const key = dayKeyOf(new Date(e.ts)); predMap[key] = (predMap[key]||0) + 1; });
   const chartEl = document.getElementById('dayBarChart');
   if (!chartEl) return;
   const todayAnc = todayStart();
   const AVAIL = 68;
-  // Find first day ever
-  let firstAnc = new Date(todayAnc);
+  // Find first real day ever (sert de base aux stats réelles : moy., jours semaine)
+  let realFirstAnc = new Date(todayAnc);
   if (jEntries.length) {
     const firstTs = jEntries.reduce((a,b) => new Date(a.ts)<new Date(b.ts)?a:b).ts;
-    const fd = new Date(firstTs); firstAnc = new Date(fd); firstAnc.setHours(8,0,0,0);
-    if (fd < firstAnc) firstAnc.setDate(firstAnc.getDate()-1);
+    const fd = new Date(firstTs); realFirstAnc = new Date(fd); realFirstAnc.setHours(8,0,0,0);
+    if (fd < realFirstAnc) realFirstAnc.setDate(realFirstAnc.getDate()-1);
+  }
+  // Le graphique s'étend en plus loin si des jours prédits existent avant
+  let firstAnc = new Date(realFirstAnc);
+  if (predEntries.length) {
+    const firstPredTs = predEntries.reduce((a,b) => new Date(a.ts)<new Date(b.ts)?a:b).ts;
+    const fpd = new Date(firstPredTs); const firstPredAnc = new Date(fpd); firstPredAnc.setHours(8,0,0,0);
+    if (fpd < firstPredAnc) firstPredAnc.setDate(firstPredAnc.getDate()-1);
+    if (firstPredAnc < firstAnc) firstAnc = firstPredAnc;
   }
   // Build all days oldest→newest
   const cols = [];
@@ -675,41 +778,45 @@ function renderInsight() {
   while (cur <= todayAnc) {
     const key = cur.toISOString().slice(0,10);
     const count = dayMap[key] || 0;
+    const predCount = predMap[key] || 0;
     const isToday = cur.getTime() === todayAnc.getTime();
     const isMonday = cur.getDay() === 1 && cols.length > 0;
     const lbl = isToday ? 'Auj.' : `${cur.getDate()}/${cur.getMonth()+1}`;
-    cols.push({ count, lbl, isToday, isMonday });
+    cols.push({ key, count, predCount, lbl, isToday, isMonday });
     cur.setDate(cur.getDate()+1);
   }
-  const maxC = Math.max(...cols.map(c => c.count), 1);
-  chartEl.innerHTML = cols.map(({ count, lbl, isToday, isMonday }) => {
-    const barH = count ? Math.max(14, Math.round((count/maxC)*AVAIL)) : 3;
+  const maxC = Math.max(...cols.map(c => c.count+c.predCount), 1);
+  chartEl.innerHTML = cols.map(({ key, count, predCount, lbl, isToday, isMonday }) => {
+    const total = count + predCount;
+    const barH = total ? Math.max(14, Math.round((total/maxC)*AVAIL)) : 3;
     const spH = AVAIL - barH;
-    const barCls = isToday ? ' today' : count===0 ? ' zero' : '';
+    const isPredOnly = predCount>0 && count===0;
+    const barCls = isToday ? ' today' : total===0 ? ' zero' : isPredOnly ? ' predicted' : '';
     const sep = isMonday ? '<div class="db-week-sep"></div>' : '';
-    return `${sep}<div class="db-col">
+    return `${sep}<div class="db-col" data-date="${key}">
       <div style="height:${spH}px"></div>
-      <div class="db-bar${barCls}" style="height:${barH}px"><span class="db-bar-val">${count||''}</span></div>
+      <div class="db-bar${barCls}" style="height:${barH}px"><span class="db-bar-val">${total||''}</span></div>
       <span class="db-lbl">${lbl}</span>
     </div>`;
   }).join('');
-  // Update badge with total days
+  // Update badge with total real days
+  const realDayCount = Math.round((todayAnc - realFirstAnc) / 86400000) + 1;
   const badge = document.getElementById('insightDaysBadge');
-  if (badge) badge.textContent = cols.length + ' jours';
+  if (badge) badge.textContent = realDayCount + ' jours';
   // Scroll to right (most recent)
   requestAnimationFrame(() => { chartEl.scrollLeft = chartEl.scrollWidth; });
-  // Global daily average
+  // Global daily average (réel uniquement)
   const globalEl = document.getElementById('insightGlobalAvg');
-  if (globalEl && cols.length) {
+  if (globalEl && realDayCount) {
     const totalAll = cols.reduce((s,c) => s+c.count, 0);
-    const avg = (totalAll / cols.length).toFixed(1);
+    const avg = (totalAll / realDayCount).toFixed(1);
     globalEl.textContent = 'Moy. J/J : ' + avg;
   }
-  // Weekly averages (0=Mon … 6=Sun)
+  // Weekly averages (0=Mon … 6=Sun) — réel uniquement
   const weekEl = document.getElementById('weekAvg');
   if (weekEl) {
     const wTotals = new Array(7).fill(0), wOcc = new Array(7).fill(0);
-    const wc = new Date(firstAnc);
+    const wc = new Date(realFirstAnc);
     while (wc <= todayAnc) {
       const dow = (wc.getDay() + 6) % 7;
       wOcc[dow]++;
@@ -729,13 +836,37 @@ function renderInsight() {
       </div>`;
     }).join('');
   }
+  // Pic réel (semaine glissante 7j la plus active, données réelles uniquement)
+  const peakEl = document.getElementById('peakRealInfo');
+  if (peakEl) {
+    let bestSum = -1, bestStart = null;
+    const wc2 = new Date(realFirstAnc);
+    while (wc2 <= todayAnc) {
+      let sum = 0;
+      for (let i=0;i<7;i++) {
+        const d = new Date(wc2); d.setDate(d.getDate()+i);
+        if (d > todayAnc) break;
+        sum += dayMap[d.toISOString().slice(0,10)] || 0;
+      }
+      if (sum > bestSum) { bestSum = sum; bestStart = new Date(wc2); }
+      wc2.setDate(wc2.getDate()+1);
+    }
+    if (bestStart && bestSum > 0) {
+      const bestEnd = new Date(bestStart); bestEnd.setDate(bestEnd.getDate()+6);
+      const dd = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+      peakEl.textContent = `🔥 Semaine la + active (réel) : ${dd(bestStart)}–${dd(bestEnd)} · ${bestSum} J`;
+    } else {
+      peakEl.textContent = '';
+    }
+  }
+  renderDayDetail();
 }
 
 function renderJ() {
   const sachets=getSachetsData();
   const closed=sachets.filter(s=>s.closed);
   const open=sachets.find(s=>!s.closed)||null;
-  const totalJ=J_LOG.filter(e=>e.type==='j').length;
+  const totalJ=J_LOG.filter(e=>e.type==='j'&&!e.predicted).length;
   document.getElementById('jTotal').textContent=totalJ;
   if(closed.length>0){
     const avg=closed.reduce((s,x)=>s+x.js.length,0)/closed.length;
@@ -767,7 +898,7 @@ function renderJ() {
     }
     el.innerHTML=html; row.appendChild(el);
   });
-  const jSorted=J_LOG.filter(e=>e.type==='j').sort((a,b)=>new Date(a.ts)-new Date(b.ts));
+  const jSorted=J_LOG.filter(e=>e.type==='j'&&!e.predicted).sort((a,b)=>new Date(a.ts)-new Date(b.ts));
   const deltaMap={};
   for(let i=1;i<jSorted.length;i++) deltaMap[jSorted[i].ts]=new Date(jSorted[i].ts)-new Date(jSorted[i-1].ts);
   const sinceEl=document.getElementById('jSinceLast');
@@ -779,10 +910,13 @@ function renderJ() {
     const displayLog=[...J_LOG].reverse().slice(0,30);
     logEl.innerHTML=displayLog.map((e,ri)=>{
       const origIdx=J_LOG.length-1-ri;
-      if(e.type==='fin') return `<div class="j-log-item"><span style="color:var(--green);font-weight:600">✓ Sachet ${e.sachet} terminé</span><span class="j-time">${fmtTs(e.ts)}</span></div>`;
+      const delBtn=`<button class="j-del-btn" onclick="window._delJ(${origIdx})">🗑</button>`;
+      if(e.type==='fin') return `<div class="j-log-item"><span style="color:var(--green);font-weight:600">✓ Sachet ${e.sachet} terminé</span><div class="j-log-right"><span class="j-time">${fmtTs(e.ts)}</span>${delBtn}</div></div>`;
       const delta=deltaMap[e.ts];
       const deltaHtml=delta!==undefined?`<span class="j-delta">+${fmtDelta(delta)}</span>`:'';
-      return `<div class="j-log-item"><span class="j-num">J · Sachet ${e.sachet}</span><div class="j-log-right">${deltaHtml}<span class="j-time editable" data-idx="${origIdx}">${fmtTs(e.ts)}</span></div></div>`;
+      const predBadge=e.predicted?`<span class="badge-pred">🔮 prédit</span>`:'';
+      const numHtml=e.predicted?`<span class="j-num" style="color:var(--muted2)">J · ${predBadge}</span>`:`<span class="j-num">J · Sachet ${e.sachet}</span>`;
+      return `<div class="j-log-item">${numHtml}<div class="j-log-right">${deltaHtml}<span class="j-time editable" data-idx="${origIdx}">${fmtTs(e.ts)}</span>${delBtn}</div></div>`;
     }).join('');
   }
   renderInsight();
@@ -850,6 +984,91 @@ window.undoJ = async function() {
   const last=J_LOG[J_LOG.length-1]; J_LOG.pop(); await saveJ();
   toast(last.type==='fin'?`Sachet ${last.sachet} réouvert.`:'Dernier J annulé.');
 };
+window._delJ = async function(idx) {
+  if (idx<0 || idx>=J_LOG.length) return;
+  J_LOG.splice(idx,1);
+  await saveJ();
+  toast('Entrée supprimée.');
+};
+window.generateHistory = async function() {
+  const jEntries = J_LOG.filter(e=>e.type==='j'&&!e.predicted);
+  if (!jEntries.length) return toast('Ajoute d\'abord des J réels avant de générer un historique.',1);
+  const firstTs = jEntries.reduce((a,b)=>new Date(a.ts)<new Date(b.ts)?a:b).ts;
+  const firstRealDay = dayKeyOf(new Date(firstTs));
+  if (HIST_START >= firstRealDay) return toast('L\'historique réel commence déjà avant ou à cette date.',1);
+  const stats = computeRealStats();
+  if (!stats.globalAvg) return toast('Pas assez de données réelles pour estimer une moyenne.',1);
+  const start = new Date(HIST_START+'T08:00:00');
+  const end = new Date(firstRealDay+'T08:00:00'); // exclusif
+  const nDays = Math.round((end-start)/86400000);
+  const ok = confirm(`Générer l'historique prédit du ${fmt(HIST_START)} au ${fmt(firstRealDay)} (~${nDays} jours, moyenne réelle ≈ ${stats.globalAvg.toFixed(1)} J/j) ?\n\nCes J seront marqués "prédit", supprimables un par un.`);
+  if (!ok) return;
+  J_LOG = J_LOG.filter(e => !(e.predicted && new Date(e.ts) < end));
+  let added = 0, daysWithJ = 0;
+  const cur = new Date(start);
+  while (cur < end) {
+    const dow = (cur.getDay()+6)%7;
+    const lambda = stats.weekAvg[dow] || stats.globalAvg;
+    const count = poissonSample(lambda);
+    if (count > 0) {
+      daysWithJ++;
+      weightedHoursPick(stats.hProb, count).forEach(h => {
+        const ts = new Date(cur);
+        ts.setHours(h, Math.floor(Math.random()*60), Math.floor(Math.random()*60), 0);
+        J_LOG.push({ type:'j', ts: ts.toISOString(), predicted:true });
+        added++;
+      });
+    }
+    cur.setDate(cur.getDate()+1);
+  }
+  J_LOG.sort((a,b)=>new Date(a.ts)-new Date(b.ts));
+  await saveJ();
+  toast(`🔮 ${added} J générés sur ${daysWithJ}/${nDays} jours`,0,1);
+};
+window.fillDay = async function(dateStr) {
+  const stats = computeRealStats();
+  const dow = (new Date(dateStr+'T12:00:00').getDay()+6)%7;
+  const target = Math.round(stats.weekAvg[dow] || stats.globalAvg || 0);
+  const existing = J_LOG.filter(e=>e.type==='j'&&dayKeyOf(new Date(e.ts))===dateStr).length;
+  const toAdd = target - existing;
+  if (toAdd <= 0) return toast('Déjà à la moyenne pour ce jour.');
+  topHours(stats.hProb, toAdd).forEach(h => {
+    const ts = new Date(dateStr+'T00:00:00');
+    ts.setHours(h, Math.floor(Math.random()*60), Math.floor(Math.random()*60), 0);
+    J_LOG.push({ type:'j', ts: ts.toISOString(), predicted:true });
+  });
+  J_LOG.sort((a,b)=>new Date(a.ts)-new Date(b.ts));
+  await saveJ();
+  toast(`🔮 ${toAdd} J ajoutés (prédits) pour ce jour`,0,1);
+};
+let openDetailDate = null;
+window.openDayDetail = function(dateStr) {
+  openDetailDate = dateStr;
+  renderDayDetail();
+  const el = document.getElementById('dayDetail');
+  el.style.display = 'block';
+  el.scrollIntoView({behavior:'smooth', block:'nearest'});
+};
+window.closeDayDetail = function() {
+  openDetailDate = null;
+  document.getElementById('dayDetail').style.display = 'none';
+};
+function renderDayDetail() {
+  if (!openDetailDate) return;
+  const el = document.getElementById('dayDetail');
+  if (!el) return;
+  const entries = J_LOG.map((e,idx)=>({e,idx})).filter(({e})=>e.type==='j'&&dayKeyOf(new Date(e.ts))===openDetailDate).sort((a,b)=>new Date(a.e.ts)-new Date(b.e.ts));
+  const rows = entries.map(({e,idx})=>{
+    const badge = e.predicted?`<span class="badge-pred">🔮 prédit</span>`:`<span class="badge-pred real">réel</span>`;
+    const time = fmtTs(e.ts).split(' ')[1] || fmtTs(e.ts);
+    return `<div class="day-detail-row"><span>${time}</span>${badge}<button class="j-del-btn" onclick="window._delJ(${idx})">🗑</button></div>`;
+  }).join('') || `<div class="day-detail-row" style="justify-content:center;color:var(--muted)">Aucun J ce jour</div>`;
+  el.innerHTML = `
+    <div class="day-detail-header"><strong>${fmt(openDetailDate)}</strong><button class="j-del-btn" onclick="window.closeDayDetail()">✕ fermer</button></div>
+    <div class="day-detail-list">${rows}</div>
+    <button class="btn-hist" onclick="window.fillDay('${openDetailDate}')">+ Remplir ce jour (moyenne)</button>
+  `;
+}
 
 window.switchTab = function(name) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -895,6 +1114,10 @@ document.getElementById('jLogList').addEventListener('click', e => {
     if(ke.key==='Enter'){ke.preventDefault();input.blur();}
     if(ke.key==='Escape'){done=true;renderJ();}
   });
+});
+document.getElementById('dayBarChart').addEventListener('click', e => {
+  const col = e.target.closest('.db-col');
+  if (col && col.dataset.date) window.openDayDetail(col.dataset.date);
 });
 document.getElementById('headerMeta').textContent='Connexion…';
 setDate();
