@@ -1,0 +1,17 @@
+{
+  "name": "Tracker Dépenses",
+  "short_name": "Tracker",
+  "description": "Suivi de consommation et d'achats",
+  "start_url": "/tracker-depenses/",
+  "scope": "/tracker-depenses/",
+  "display": "standalone",
+  "background_color": "#141414",
+  "theme_color": "#141414",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/tracker-depenses/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/tracker-depenses/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/tracker-depenses/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/tracker-depenses/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

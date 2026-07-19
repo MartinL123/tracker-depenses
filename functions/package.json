@@ -1,0 +1,11 @@
+{
+  "name": "functions",
+  "description": "Cloud Function : rappel push si aucun J loggé aujourd'hui, tous les soirs à 21h",
+  "engines": { "node": "20" },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.1.0",
+    "firebase-functions": "^5.0.0"
+  },
+  "private": true
+}
