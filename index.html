@@ -110,7 +110,7 @@ input { font-family:'Poppins',sans-serif; }
 .hist-interval.green { color:var(--green); } .hist-interval.yellow { color:var(--yellow); } .hist-interval.red { color:var(--red); } .hist-interval.na { color:var(--muted); }
 .hist-time { font-size:16px; text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px; cursor:pointer; color:var(--text); background:transparent; border:none; font-family:'Poppins',sans-serif; padding:0; }
 .hist-time:hover { color:var(--blue); }
-.hist-time-input { background:var(--bg); border:1px solid var(--blue); color:var(--text); font-family:'Poppins',sans-serif; font-size:14px; padding:4px 8px; border-radius:6px; outline:none; }
+.hist-time-input { background:var(--bg); border:1px solid var(--blue); color:var(--text); font-family:'Poppins',sans-serif; font-size:13px; padding:4px 6px; border-radius:6px; outline:none; max-width:150px; }
 .hist-empty { text-align:center; color:var(--muted); font-size:14px; padding:16px 0; }
 
 /* DELETE CIRCLE */
@@ -544,19 +544,17 @@ function renderHistConso() {
       const entry = J_LOG[oi];
       if (!entry) return;
       const input = document.createElement('input');
-      input.type = 'time'; input.className = 'hist-time-input';
+      input.type = 'datetime-local'; input.className = 'hist-time-input';
       const d = new Date(entry.ts);
-      input.value = pad2(d.getHours())+':'+pad2(d.getMinutes());
+      input.value = new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16);
       btn.replaceWith(input); input.focus();
       if (input.showPicker) { try { input.showPicker(); } catch(_) {} }
       let done = false;
       const commit = async () => {
         if (done) return; done = true;
         if (input.value) {
-          const [hh,mm] = input.value.split(':').map(Number);
-          const nd = new Date(entry.ts); nd.setHours(hh,mm,0,0);
-          J_LOG[oi].ts = nd.toISOString();
-          await saveJ(); toast('Heure modifiée ✓');
+          J_LOG[oi].ts = new Date(input.value).toISOString();
+          await saveJ(); toast('Date/heure modifiée ✓');
         }
         renderAll();
       };
