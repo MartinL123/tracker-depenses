@@ -27,12 +27,12 @@ input { font-family:'Poppins',sans-serif; }
 .hero-label { font-size:18px; text-transform:uppercase; color:var(--text); }
 .hero-period { display:flex; align-items:flex-end; gap:8px; }
 .hero-days { font-size:40px; line-height:1; }
-.hero-days.green { color:var(--green); } .hero-days.yellow { color:var(--yellow); }
+.hero-days.green { color:var(--green); } .hero-days.yellow { color:var(--yellow); } .hero-days.red { color:var(--red); }
 .hero-days-unit { font-size:24px; color:var(--muted); }
 .hero-sub { font-size:14px; color:var(--text); }
 .progress-track { background:var(--border); border-radius:9999px; height:8px; width:100%; overflow:hidden; }
 .progress-fill { height:100%; border-radius:9999px; transition:width 0.3s; }
-.progress-fill.green { background:var(--green); } .progress-fill.yellow { background:var(--yellow); }
+.progress-fill.green { background:var(--green); } .progress-fill.yellow { background:var(--yellow); } .progress-fill.red { background:var(--red); }
 .hero-stats { display:flex; align-items:center; justify-content:space-between; padding:4px 0; }
 .hero-stat { display:flex; flex-direction:column; gap:0; }
 .hero-stat.center { align-items:center; } .hero-stat.right { align-items:flex-end; }
@@ -92,7 +92,7 @@ input { font-family:'Poppins',sans-serif; }
 .bar-rect { width:100%; border-radius:8px 8px 0 0; min-height:2px; }
 .bar-rect.red { background:var(--red); } .bar-rect.yellow { background:var(--yellow); } .bar-rect.green { background:var(--green); }
 .bar-rect.nodata { background:repeating-linear-gradient(45deg, rgba(107,114,128,0.35) 0 4px, rgba(107,114,128,0.12) 4px 8px); }
-.bar-lbl { font-size:11px; color:var(--text); text-align:center; white-space:nowrap; }
+.bar-lbl { font-size:11px; color:var(--text); text-align:center; line-height:14px; }
 
 /* HISTORY (conso + achats) */
 .history-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
@@ -390,15 +390,15 @@ function renderHero() {
   const a = achatStats();
   if (!a.last) return;
   const days = a.sinceLast;
-  const good = days > a.avg;
+  const level = days >= a.avg ? 'green' : days >= 10 ? 'yellow' : 'red';
   const daysEl = document.getElementById('heroDays');
   daysEl.textContent = days;
-  daysEl.className = 'hero-days ' + (good ? 'green' : 'yellow');
+  daysEl.className = 'hero-days ' + level;
   document.getElementById('heroSub').textContent = 'depuis le ' + fmt(a.last.dateStr);
   const pct = a.maxD ? Math.min(100, Math.round(days/a.maxD*100)) : 0;
   const pf = document.getElementById('heroProgress');
   pf.style.width = pct + '%';
-  pf.className = 'progress-fill ' + (good ? 'green' : 'yellow');
+  pf.className = 'progress-fill ' + level;
   document.getElementById('heroTotal').textContent = a.total.toLocaleString('fr-FR')+'€';
   if (a.first) {
     const [y,m] = a.first.dateStr.split('-').map(Number);
@@ -486,7 +486,7 @@ function renderJGraph() {
     return `<div class="bar-col">
       <span class="bar-val">${noData ? '—' : val}</span>
       <div class="bar-rect ${noData?'nodata':cls}" style="height:${pct}%"></div>
-      <span class="bar-lbl">${MOIS_ABBR2[m]} ${String(y).slice(2)}</span>
+      <span class="bar-lbl">${MOIS_ABBR2[m]}<br>${String(y).slice(2)}</span>
     </div>`;
   }).join('');
 }
@@ -589,17 +589,12 @@ function renderEurGraph() {
   const el = document.getElementById('eurGraph');
   el.innerHTML = months.map((mo,i) => {
     const val = totals[mo.key] || 0;
-    const prev = i>0 ? (totals[months[i-1].key]||0) : null;
-    let cls = 'yellow';
-    if (prev === null || prev === 0) cls = 'yellow';
-    else if (val > prev*1.1) cls = 'red';
-    else if (val < prev*0.9) cls = 'green';
-    else cls = 'yellow';
+    const cls = val < 200 ? 'green' : val < 400 ? 'yellow' : 'red';
     const pct = Math.max(4, Math.round((val/maxV)*100));
     return `<div class="bar-col">
       <span class="bar-val">${val ? val+'€' : ''}</span>
       <div class="bar-rect ${cls}" style="height:${pct}%"></div>
-      <span class="bar-lbl">${MOIS_ABBR2[mo.m]} ${String(mo.y).slice(2)}</span>
+      <span class="bar-lbl">${MOIS_ABBR2[mo.m]}<br>${String(mo.y).slice(2)}</span>
     </div>`;
   }).join('');
 }
