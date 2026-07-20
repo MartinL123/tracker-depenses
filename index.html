@@ -327,7 +327,7 @@ const REF_DEVICE = doc(db, 'tracker', 'device');
 // ⚠️ À remplacer par ta clé VAPID (Firebase Console > Paramètres du projet
 // > Cloud Messaging > Certificats Web Push > "Générer une paire de clés").
 // Les notifications restent inactives tant que ce placeholder n'est pas remplacé.
-const VAPID_KEY = 'REMPLACER_PAR_TA_CLE_VAPID';
+const VAPID_KEY = 'BLiWqEpDszbaKXMQ0UJ4iin8TJL_NMjGNg78UuhJbGmKMCmXRJLa0k7FiQeg-ImTff_J-NFeJoOImpOj_DSYgF4';
 
 async function saveAchats() {
   try { await setDoc(REF_A, { entries: DATA.map(e => ({date:e[0],amount:e[1]})) }); }
