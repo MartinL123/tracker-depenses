@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>🧪 TEST — Tracker Dépenses</title>
+<link rel="manifest" href="/tracker-depenses/manifest.json">
+<meta name="theme-color" content="#141414">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="/tracker-depenses/icons/icon-180.png">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #141414; --surface: #1d1d1d; --border: #2e2e2e;
+  --text: #f5f5f5; --muted: #6b7280; --black: #141414;
+  --blue: #3a86ff; --green: #61d180; --yellow: #fec84b; --red: #f04438;
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { font-family:'Poppins',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+body::before {
+  content:''; position:fixed; inset:0;
+  background-image: linear-gradient(rgba(58,134,255,0.04) 1px,transparent 1px), linear-gradient(90deg,rgba(58,134,255,0.04) 1px,transparent 1px);
+  background-size:40px 40px; pointer-events:none; z-index:0;
+}
+.app { position:relative; z-index:1; max-width:480px; margin:0 auto; padding:16px 16px 120px; }
+button { font-family:'Poppins',sans-serif; }
+input { font-family:'Poppins',sans-serif; }
+
+/* HERO HEADER */
+.hero { background:var(--surface); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:8px; }
+.hero-label { font-size:18px; text-transform:uppercase; color:var(--text); }
+.hero-period { display:flex; align-items:flex-end; gap:8px; }
+.hero-days { font-size:40px; line-height:1; }
+.hero-days.green { color:var(--green); } .hero-days.yellow { color:var(--yellow); } .hero-days.red { color:var(--red); }
+.hero-days-unit { font-size:24px; color:var(--muted); }
+.hero-sub { font-size:14px; color:var(--text); }
+.progress-track { background:var(--border); border-radius:9999px; height:8px; width:100%; overflow:hidden; }
+.progress-fill { height:100%; border-radius:9999px; transition:width 0.3s; }
+.progress-fill.green { background:var(--green); } .progress-fill.yellow { background:var(--yellow); } .progress-fill.red { background:var(--red); }
+.hero-stats { display:flex; align-items:center; justify-content:space-between; padding:4px 0; }
+.hero-stat { display:flex; flex-direction:column; gap:0; }
+.hero-stat.center { align-items:center; } .hero-stat.right { align-items:flex-end; }
+.hero-stat .v { font-size:18px; text-transform:uppercase; }
+.hero-stat .l { font-size:14px; color:var(--muted); }
+.hero-div { width:1px; height:32px; background:var(--border); }
+
+/* NAV TABS */
+.nav { display:flex; gap:8px; margin-top:8px; }
+.nav-btn { flex:1; padding:12px 16px; border:none; border-radius:8px; background:var(--border); color:var(--text); font-size:16px; cursor:pointer; transition:background 0.15s; }
+.nav-btn.active-conso { background:var(--blue); }
+.nav-btn.active-achat { background:var(--green); }
+
+.tab-panel { display:none; margin-top:16px; }
+
+/* NOTIF BANNER */
+.notif-banner { display:flex; align-items:center; justify-content:space-between; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 16px; margin-top:8px; }
+.notif-banner-text { font-size:13px; color:var(--text); flex:1; }
+.notif-banner-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.notif-banner-btn { background:var(--blue); border:none; border-radius:8px; color:var(--text); font-size:13px; font-weight:500; padding:8px 14px; cursor:pointer; }
+.notif-banner-close { background:transparent; border:none; color:var(--muted); font-size:14px; cursor:pointer; padding:4px; }
+.notif-banner-close:hover { color:var(--text); }
+.tab-panel.active { display:block; }
+
+/* CARDS GRID */
+.cards-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
+.card { background:var(--surface); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:8px; }
+.card-lbl { font-size:16px; color:var(--muted); }
+.card-val { font-size:40px; line-height:1; }
+.card-val.green { color:var(--green); } .card-val.yellow { color:var(--yellow); } .card-val.white { color:var(--text); }
+.card-sub { font-size:12px; color:var(--text); }
+
+/* SECTION CARD (generic container) */
+.section-card { background:var(--surface); border-radius:16px; padding:16px; margin-bottom:16px; }
+.section-title { font-size:18px; text-transform:uppercase; color:var(--muted); margin-bottom:16px; }
+
+/* CARDS ROW (achats) */
+.cards-row { display:flex; gap:8px; margin-bottom:16px; }
+.cards-row .card { flex:1; }
+
+/* CALENDAR */
+.cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.cal-title { font-size:24px; font-weight:700; color:var(--text); text-transform:capitalize; }
+.cal-nav { display:flex; gap:8px; }
+.cal-nav button { background:transparent; border:none; color:var(--text); font-size:20px; padding:16px; cursor:pointer; line-height:1; }
+.cal-nav button:hover { color:var(--blue); }
+.cal-weekdays { display:grid; grid-template-columns:repeat(7,1fr); margin-bottom:4px; }
+.cal-weekdays span { text-align:center; font-size:12px; color:var(--muted); padding:4px 0; }
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+.cal-cell { aspect-ratio:1/1.2; border:1px solid var(--muted); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; border-radius:2px; }
+.cal-cell.other-month { border-color:var(--surface); cursor:default; }
+.cal-cell.other-month .cal-day, .cal-cell.other-month .cal-count { color:var(--surface); }
+.cal-cell.today { background:var(--blue); }
+.cal-cell.achat { background:var(--yellow); }
+.cal-cell.future .cal-day, .cal-cell.future .cal-count { color:var(--muted); }
+.cal-day { font-size:16px; color:var(--text); }
+.cal-cell.achat .cal-day { color:var(--black); }
+.cal-count { font-size:14px; color:var(--yellow); }
+.cal-cell.achat .cal-count { color:var(--red); }
+/* variant Figma "Calendar cell / Guessed" (node 36:461) : jour estimé */
+.cal-cell.guessed {
+  background:
+    linear-gradient(rgba(255,255,255,0.2), rgba(255,255,255,0.2)),
+    repeating-linear-gradient(45deg, #f2f2f2 0 1px, #bfbfbf 1px 2.47px);
+  border-color:#1d1d1d;
+}
+.cal-cell.guessed .cal-day { color:#1d1d1d; }
+.cal-cell.guessed .cal-count { color:var(--blue); }
+
+/* BAR GRAPH (12 months) */
+.bar-graph { display:flex; align-items:flex-end; gap:4px; height:235px; }
+.bar-col { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:8px; height:100%; min-width:0; }
+.bar-val { font-size:10px; color:var(--text); text-align:center; white-space:nowrap; }
+.bar-rect { width:100%; border-radius:8px 8px 0 0; min-height:2px; }
+.bar-rect.red { background:var(--red); } .bar-rect.yellow { background:var(--yellow); } .bar-rect.green { background:var(--green); }
+.bar-rect.nodata { background:repeating-linear-gradient(45deg, rgba(107,114,128,0.35) 0 4px, rgba(107,114,128,0.12) 4px 8px); }
+.bar-lbl { font-size:11px; color:var(--text); text-align:center; line-height:14px; }
+
+/* HISTORY (conso + achats) */
+.history-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.history-title { font-size:18px; text-transform:uppercase; color:var(--muted); }
+.date-nav { display:flex; align-items:center; gap:4px; }
+.date-nav button { background:transparent; border:none; color:var(--text); font-size:16px; padding:8px; cursor:pointer; }
+.date-nav button:hover { color:var(--blue); }
+.date-nav span { font-size:16px; color:var(--text); white-space:nowrap; text-transform:capitalize; }
+
+.hist-row { display:flex; flex-direction:column; gap:8px; padding:8px 0; border-bottom:1px solid var(--border); position:relative; }
+.hist-row:last-child { border-bottom:none; }
+.hist-row-top { display:grid; grid-template-columns:1fr auto auto auto; align-items:center; gap:8px; }
+.hist-left { font-size:16px; color:var(--text); }
+.hist-interval { font-size:16px; }
+.hist-interval.green { color:var(--green); } .hist-interval.yellow { color:var(--yellow); } .hist-interval.red { color:var(--red); } .hist-interval.na { color:var(--muted); }
+.hist-time { font-size:16px; text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px; cursor:pointer; color:var(--text); background:transparent; border:none; font-family:'Poppins',sans-serif; padding:0; }
+.hist-time:hover { color:var(--blue); }
+.hist-time-input { background:var(--bg); border:1px solid var(--blue); color:var(--text); font-family:'Poppins',sans-serif; font-size:13px; padding:4px 6px; border-radius:6px; outline:none; max-width:150px; }
+.hist-empty { text-align:center; color:var(--muted); font-size:14px; padding:16px 0; }
+
+/* DELETE CIRCLE */
+.del-circle { display:none; width:32px; height:32px; min-width:32px; background:var(--red); border-radius:50%; border:none; cursor:pointer; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 14px rgba(240,68,56,0.45); transition:transform 0.15s; animation:popIn 0.2s cubic-bezier(.34,1.56,.64,1); padding:0; }
+.row-selected .del-circle { display:flex; }
+.del-circle svg { width:14px; height:14px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
+.del-circle:hover { transform:scale(1.1); }
+.del-circle:active { transform:scale(0.92); }
+@keyframes popIn { from{transform:scale(0);opacity:0;} to{transform:scale(1);opacity:1;} }
+.hist-row.row-selected, .achat-row.row-selected { background:rgba(240,68,56,0.04); }
+
+/* ACHAT FORM */
+.add-form { display:flex; gap:16px; align-items:center; }
+.add-fields { display:flex; flex:1; gap:8px; min-width:0; }
+.add-field { flex:1; min-width:0; background:var(--bg); border:1px solid var(--muted); border-radius:8px; padding:16px; }
+.add-field input { width:100%; background:transparent; border:none; color:var(--text); font-size:16px; outline:none; }
+.add-field input::placeholder { color:var(--muted); }
+.add-field input[type=date]::-webkit-calendar-picker-indicator { filter:invert(0.6); cursor:pointer; }
+.add-submit { width:56px; height:56px; flex-shrink:0; background:var(--blue); border:none; border-radius:8px; color:var(--text); font-size:32px; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; transition:transform 0.15s; }
+.add-submit:hover { transform:scale(1.04); }
+.add-submit:active { transform:scale(0.94); }
+
+/* ACHAT HISTORY ROW */
+.achat-row { display:grid; grid-template-columns:1fr auto auto auto; align-items:center; gap:8px; padding:10px 0; border-bottom:1px solid var(--border); cursor:pointer; }
+.achat-row:last-child { border-bottom:none; }
+.achat-date { font-size:16px; color:var(--text); }
+.achat-amount { font-size:16px; color:var(--muted); text-align:center; }
+.achat-badge { font-size:16px; font-weight:500; }
+.achat-badge.green { color:var(--green); } .achat-badge.yellow { color:var(--yellow); } .achat-badge.red { color:var(--red); } .achat-badge.na { color:var(--muted); }
+
+/* FAB */
+.fab-wrap { position:fixed; bottom:24px; right:24px; z-index:200; display:flex; flex-direction:column; align-items:center; gap:16px; }
+.fab-undo { background:var(--border); display:flex; align-items:center; justify-content:center; gap:4px; padding:4px 16px; border-radius:4px; border:none; color:var(--text); font-size:12px; cursor:pointer; }
+.fab-undo:hover { color:var(--red); }
+.fab-j { width:50px; height:50px; border-radius:25px; background:var(--red); border:1px solid var(--yellow); color:var(--yellow); font-size:40px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.15s; line-height:1; padding:0; }
+.fab-j:hover { transform:scale(1.06); }
+.fab-j:active { transform:scale(0.9); }
+
+/* TOAST */
+.toast { position:fixed; bottom:24px; left:16px; right:100px; background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--blue); border-radius:12px; padding:14px 18px; font-size:12px; font-weight:500; color:var(--text); box-shadow:0 8px 24px rgba(0,0,0,0.4); transform:translateY(70px); opacity:0; transition:all 0.32s cubic-bezier(.34,1.56,.64,1); z-index:999; max-width:340px; }
+.toast.on { transform:translateY(0); opacity:1; }
+
+::-webkit-scrollbar { width:4px; height:4px; }
+::-webkit-scrollbar-track { background:var(--surface); }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+</style>
+</head>
+<body>
+<div style="border:1.5px dashed #8a5cf6;background:rgba(138,92,246,0.12);color:#c9b3ff;border-radius:10px;padding:8px 12px;font-size:12px;text-align:center;margin:10px auto 0;max-width:456px;">
+  🧪 <b>INSTANCE DE TEST</b> — snapshot du 21/07/2026, écriture désactivée.<br>
+  Jours hachurés = conso estimée à la moyenne (4j/jour), aucune donnée réelle ce jour-là.
+</div>
+<div class="app">
+
+  <!-- HERO HEADER (shared) -->
+  <div class="hero">
+    <p class="hero-label">Depuis le dernier achat</p>
+    <div class="hero-period">
+      <span class="hero-days" id="heroDays">—</span><span class="hero-days-unit">jours</span>
+    </div>
+    <p class="hero-sub" id="heroSub">depuis le —</p>
+    <div class="progress-track"><div class="progress-fill" id="heroProgress" style="width:0%"></div></div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <p class="v" id="heroTotal" style="color:var(--red)">—</p>
+        <p class="l" id="heroTotalLbl">—</p>
+      </div>
+      <div class="hero-div"></div>
+      <div class="hero-stat center">
+        <p class="v" id="heroAvg" style="color:var(--yellow)">—</p>
+        <p class="l">moyenne</p>
+      </div>
+      <div class="hero-div"></div>
+      <div class="hero-stat right">
+        <p class="v" id="heroRecord" style="color:var(--green)">—</p>
+        <p class="l">record</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <div class="nav">
+    <button class="nav-btn active-conso" id="navConso" onclick="switchTab('conso')">Consommation</button>
+    <button class="nav-btn" id="navAchat" onclick="switchTab('achat')">Achat</button>
+  </div>
+
+  <!-- NOTIF BANNER -->
+  <div class="notif-banner" id="notifBanner" style="display:none">
+    <span class="notif-banner-text">Active un rappel si t'as rien loggé le soir</span>
+    <div class="notif-banner-actions">
+      <button class="notif-banner-btn" onclick="enableNotifications()">Activer</button>
+      <button class="notif-banner-close" onclick="dismissNotifBanner()">✕</button>
+    </div>
+  </div>
+
+  <!-- TAB CONSOMMATION -->
+  <div class="tab-panel active" id="panel-conso">
+
+    <div class="cards-grid">
+      <div class="card"><p class="card-lbl">Aujourd'hui</p><p class="card-val green" id="cJour">—</p><p class="card-sub" id="cJourSub">—</p></div>
+      <div class="card"><p class="card-lbl">Record</p><p class="card-val green" id="cRecord">—</p><p class="card-sub">intervalle d'achat</p></div>
+      <div class="card"><p class="card-lbl" id="cMonthLbl">—</p><p class="card-val white" id="cTotalEur">—</p><p class="card-sub">argent dépensé</p></div>
+      <div class="card"><p class="card-lbl">Total</p><p class="card-val white" id="cTotalJ">—</p><p class="card-sub">conso total</p></div>
+      <div class="card"><p class="card-lbl">Moy. conso</p><p class="card-val yellow" id="cMoyConso">—</p><p class="card-sub">conso par jours</p></div>
+      <div class="card"><p class="card-lbl">Moy. coût</p><p class="card-val yellow" id="cMoyCout">—</p><p class="card-sub">achats/mois</p></div>
+      <div class="card"><p class="card-lbl">Moy. semaine</p><p class="card-val yellow" id="cMoySemaine">—</p><p class="card-sub">conso/semaine</p></div>
+      <div class="card"><p class="card-lbl">Moy. mois</p><p class="card-val yellow" id="cMoyMois">—</p><p class="card-sub">conso/mois</p></div>
+    </div>
+
+    <div class="section-card">
+      <div class="cal-header">
+        <span class="cal-title" id="calTitle">—</span>
+        <div class="cal-nav"><button onclick="calNav(-1)">‹</button><button onclick="calNav(1)">›</button></div>
+      </div>
+      <div class="cal-weekdays"><span>Lu</span><span>Ma</span><span>Me</span><span>Je</span><span>Ve</span><span>Sa</span><span>Di</span></div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+
+    <div class="section-card">
+      <p class="section-title">Moyenne des 12 derniers mois</p>
+      <div class="bar-graph" id="jGraph"></div>
+    </div>
+
+    <div class="section-card" id="histConsoSection">
+      <div class="history-header">
+        <span class="history-title">Historique de conso</span>
+        <div class="date-nav"><button onclick="histDayNav(-1)">‹</button><span id="histDayLabel">—</span><button onclick="histDayNav(1)">›</button></div>
+      </div>
+      <div id="histConsoList"></div>
+    </div>
+
+  </div><!-- /panel-conso -->
+
+  <!-- TAB ACHATS -->
+  <div class="tab-panel" id="panel-achat">
+
+    <div class="section-card">
+      <p class="section-title">Ajouter un achat</p>
+      <div class="add-form">
+        <div class="add-fields">
+          <div class="add-field"><input type="date" id="inDate"></div>
+          <div class="add-field"><input type="number" id="inAmt" placeholder="200€" min="1" value="200"></div>
+        </div>
+        <button class="add-submit" onclick="addExpense()" title="Ajouter">+</button>
+      </div>
+    </div>
+
+    <div class="cards-row">
+      <div class="card"><p class="card-lbl">Moy. intervalle</p><p class="card-val yellow" id="aMoyInterval">—</p><p class="card-sub" id="aMoyIntervalSub">—</p></div>
+      <div class="card"><p class="card-lbl">Record</p><p class="card-val green" id="aRecord">—</p><p class="card-sub" id="aRecordSub">—</p></div>
+    </div>
+
+    <div class="section-card">
+      <p class="section-title">€ dépensé - moy. / mois</p>
+      <div class="bar-graph" id="eurGraph"></div>
+    </div>
+
+    <div class="section-card" id="histAchatSection">
+      <div class="history-header">
+        <span class="history-title">Historique d'achat</span>
+        <div class="date-nav"><button onclick="achatMonthNav(-1)">‹</button><span id="histMonthLabel">—</span><button onclick="achatMonthNav(1)">›</button></div>
+      </div>
+      <div id="histAchatList"></div>
+    </div>
+
+  </div><!-- /panel-achat -->
+
+</div>
+
+<!-- FAB -->
+<div class="fab-wrap">
+  <button class="fab-undo" onclick="undoJ()">annuler</button>
+  <button class="fab-j" onclick="addJ()">J</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+
+const ORIG_DATA = [
+  ['2025-06-16',100],['2025-06-21',100],['2025-06-26',100],
+  ['2025-07-04',100],['2025-07-15',100],['2025-08-05',100],
+  ['2025-08-15',100],['2025-08-22',100],['2025-08-29',200],
+  ['2025-09-27',200],['2025-10-07',200],['2025-10-18',200],
+  ['2025-11-03',200],['2025-11-15',200],['2025-11-26',200],
+  ['2025-12-05',200],['2026-01-11',200],['2026-01-24',200],
+  ['2026-02-04',200],['2026-02-14',200],['2026-02-25',200],
+  ['2026-03-07',200],['2026-03-21',180],['2026-04-04',200],
+  ['2026-04-16',200],['2026-05-02',200],['2026-05-30',200],
+  ['2026-06-11',200],['2026-06-28',200],['2026-07-10',200],
+];
+let DATA = [];
+let J_LOG = [];
+
+/* ===== INSTANCE DE TEST — snapshot Firebase du 2026-07-21, aucune lecture/écriture réseau ===== */
+const SNAPSHOT_ACHATS = [{"date": "2025-06-16", "amount": 100}, {"date": "2025-06-21", "amount": 100}, {"date": "2025-06-26", "amount": 100}, {"date": "2025-07-04", "amount": 100}, {"date": "2025-07-15", "amount": 100}, {"date": "2025-08-05", "amount": 100}, {"date": "2025-08-15", "amount": 100}, {"date": "2025-08-22", "amount": 100}, {"date": "2025-08-29", "amount": 200}, {"date": "2025-09-27", "amount": 200}, {"date": "2025-10-07", "amount": 200}, {"date": "2025-10-18", "amount": 200}, {"date": "2025-11-03", "amount": 200}, {"date": "2025-11-15", "amount": 200}, {"date": "2025-11-26", "amount": 200}, {"date": "2025-12-05", "amount": 200}, {"date": "2026-01-11", "amount": 200}, {"date": "2026-01-24", "amount": 200}, {"date": "2026-02-04", "amount": 200}, {"date": "2026-02-14", "amount": 200}, {"date": "2026-02-25", "amount": 200}, {"date": "2026-03-07", "amount": 200}, {"date": "2026-03-21", "amount": 180}, {"date": "2026-04-04", "amount": 200}, {"date": "2026-04-16", "amount": 200}, {"date": "2026-05-02", "amount": 200}, {"date": "2026-05-30", "amount": 200}, {"date": "2026-06-11", "amount": 200}, {"date": "2026-06-28", "amount": 200}, {"date": "2026-07-10", "amount": 200}, {"date": "2026-07-19", "amount": 200}];
+const SNAPSHOT_JLOG = [{"type": "j", "ts": "2026-03-07T21:45:23.077Z", "sachet": 1}, {"ts": "2026-03-07T22:59:08.634Z", "sachet": 1, "type": "j"}, {"type": "j", "ts": "2026-03-08T00:05:32.498Z", "sachet": 1}, {"type": "j", "sachet": 1, "ts": "2026-03-08T01:16:30.585Z"}, {"ts": "2026-03-08T13:59:28.436Z", "sachet": 1, "type": "j"}, {"type": "j", "sachet": 1, "ts": "2026-03-08T15:08:23.775Z"}, {"ts": "2026-03-08T15:58:36.691Z", "sachet": 1, "type": "j"}, {"ts": "2026-03-08T18:50:00.000Z", "sachet": 1, "type": "j"}, {"ts": "2026-03-08T21:17:59.355Z", "sachet": 1, "type": "j"}, {"sachet": 1, "ts": "2026-03-09T17:05:35.187Z", "type": "j"}, {"type": "j", "sachet": 1, "ts": "2026-03-09T18:03:20.013Z"}, {"sachet": 1, "ts": "2026-03-09T18:50:42.464Z", "type": "j"}, {"ts": "2026-03-09T20:22:16.618Z", "sachet": 1, "type": "j"}, {"type": "j", "ts": "2026-03-09T22:21:09.509Z", "sachet": 1}, {"type": "j", "ts": "2026-03-10T17:19:22.224Z", "sachet": 1}, {"type": "j", "ts": "2026-03-10T19:12:25.290Z", "sachet": 1}, {"sachet": 1, "ts": "2026-03-10T20:44:14.115Z", "type": "j"}, {"type": "j", "sachet": 1, "ts": "2026-03-10T22:34:24.552Z"}, {"type": "j", "ts": "2026-03-11T17:30:00.000Z", "sachet": 1}, {"ts": "2026-03-11T18:22:00.000Z", "sachet": 2, "type": "j"}, {"type": "j", "sachet": 2, "ts": "2026-03-11T19:55:22.013Z"}, {"type": "j", "ts": "2026-03-11T21:05:00.000Z", "sachet": 2}, {"type": "j", "sachet": 2, "ts": "2026-03-12T08:34:53.762Z"}, {"type": "j", "sachet": 2, "ts": "2026-03-12T09:35:00.000Z"}, {"type": "j", "ts": "2026-03-12T10:53:12.325Z", "sachet": 2}, {"type": "j", "sachet": 2, "ts": "2026-03-12T11:40:23.753Z"}, {"sachet": 2, "ts": "2026-03-12T13:30:00.000Z", "type": "j"}, {"ts": "2026-03-12T15:30:43.923Z", "sachet": 2, "type": "j"}, {"ts": "2026-03-12T17:50:00.908Z", "sachet": 2, "type": "j"}, {"sachet": 2, "ts": "2026-03-12T19:28:12.717Z", "type": "j"}, {"type": "j", "ts": "2026-03-12T23:00:07.664Z", "sachet": 2}, {"sachet": 2, "ts": "2026-03-13T08:37:32.408Z", "type": "j"}, {"type": "j", "ts": "2026-03-13T09:24:47.126Z", "sachet": 2}, {"sachet": 2, "ts": "2026-03-13T11:10:22.326Z", "type": "j"}, {"ts": "2026-03-13T13:30:00.000Z", "sachet": 2, "type": "j"}, {"type": "j", "sachet": 2, "ts": "2026-03-13T15:04:02.560Z"}, {"type": "j", "ts": "2026-03-13T17:45:05.637Z", "sachet": 2}, {"sachet": 2, "ts": "2026-03-13T22:43:43.992Z", "type": "j"}, {"ts": "2026-03-14T07:38:51.698Z", "sachet": 2, "type": "j"}, {"sachet": 2, "ts": "2026-03-14T08:02:00.000Z", "type": "j"}, {"sachet": 3, "ts": "2026-03-14T09:14:10.653Z", "type": "j"}, {"sachet": 3, "ts": "2026-03-14T10:21:25.889Z", "type": "j"}, {"ts": "2026-03-14T13:38:42.547Z", "sachet": 3, "type": "j"}, {"type": "j", "sachet": 3, "ts": "2026-03-14T14:32:00.000Z"}, {"type": "j", "sachet": 3, "ts": "2026-03-14T16:15:49.928Z"}, {"type": "j", "ts": "2026-03-14T17:43:29.121Z", "sachet": 3}, {"ts": "2026-03-14T18:34:47.538Z", "sachet": 3, "type": "j"}, {"type": "j", "sachet": 3, "ts": "2026-03-15T12:07:09.539Z"}, {"sachet": 3, "ts": "2026-03-15T16:02:53.487Z", "type": "j"}, {"ts": "2026-03-15T16:02:54.056Z", "sachet": 3, "type": "j"}, {"sachet": 3, "ts": "2026-03-15T19:00:35.825Z", "type": "j"}, {"type": "j", "sachet": 3, "ts": "2026-03-15T19:00:36.524Z"}, {"type": "j", "ts": "2026-03-15T21:23:46.983Z", "sachet": 3}, {"sachet": 3, "ts": "2026-03-16T17:47:21.857Z", "type": "j"}, {"type": "j", "sachet": 4, "ts": "2026-03-16T18:45:28.242Z"}, {"type": "j", "sachet": 4, "ts": "2026-03-16T22:06:45.165Z"}, {"sachet": 4, "ts": "2026-03-17T17:10:00.000Z", "type": "j"}, {"ts": "2026-03-17T20:04:41.661Z", "sachet": 4, "type": "j"}, {"ts": "2026-03-18T17:11:57.093Z", "sachet": 4, "type": "j"}, {"ts": "2026-03-18T17:44:38.981Z", "sachet": 4, "type": "j"}, {"sachet": 4, "ts": "2026-03-18T21:09:00.000Z", "type": "j"}, {"sachet": 4, "ts": "2026-03-19T08:19:14.601Z", "type": "j"}, {"type": "j", "ts": "2026-03-19T09:32:37.189Z", "sachet": 4}, {"type": "j", "ts": "2026-03-19T10:44:49.892Z", "sachet": 4}, {"type": "j", "sachet": 4, "ts": "2026-03-19T13:54:14.128Z"}, {"ts": "2026-03-19T17:09:13.712Z", "sachet": 5, "type": "j"}, {"sachet": 5, "ts": "2026-03-19T23:53:44.529Z", "type": "j"}, {"ts": "2026-03-19T23:53:44.686Z", "sachet": 5, "type": "j"}, {"ts": "2026-03-19T23:53:49.009Z", "sachet": 5, "type": "j"}, {"type": "j", "ts": "2026-03-20T09:36:22.949Z", "sachet": 5}, {"sachet": 5, "ts": "2026-03-20T10:31:05.650Z", "type": "j"}, {"ts": "2026-03-20T11:39:09.237Z", "sachet": 5, "type": "j"}, {"ts": "2026-03-20T13:33:40.165Z", "sachet": 5, "type": "j"}, {"sachet": 5, "ts": "2026-03-20T18:23:03.503Z", "type": "j"}, {"ts": "2026-03-21T00:29:13.448Z", "sachet": 5, "type": "j"}, {"sachet": 5, "ts": "2026-03-21T00:29:13.952Z", "type": "j"}, {"type": "j", "ts": "2026-03-21T09:29:11.188Z", "sachet": 5}, {"type": "j", "sachet": 5, "ts": "2026-03-21T11:39:16.891Z"}, {"sachet": 5, "ts": "2026-03-21T11:53:12.622Z", "type": "j"}, {"type": "j", "sachet": 5, "ts": "2026-03-21T16:54:01.343Z"}, {"sachet": 5, "ts": "2026-03-21T18:14:15.544Z", "type": "j"}, {"sachet": 5, "ts": "2026-03-21T19:53:42.293Z", "type": "j"}, {"type": "j", "ts": "2026-03-21T21:18:23.676Z", "sachet": 6}, {"type": "j", "sachet": 6, "ts": "2026-03-22T09:11:35.224Z"}, {"sachet": 6, "ts": "2026-03-22T11:03:57.041Z", "type": "j"}, {"ts": "2026-03-22T11:03:57.212Z", "sachet": 6, "type": "j"}, {"ts": "2026-03-22T14:19:12.026Z", "sachet": 6, "type": "j"}, {"type": "j", "sachet": 6, "ts": "2026-03-22T17:24:38.465Z"}, {"type": "j", "sachet": 6, "ts": "2026-03-22T19:23:20.886Z"}, {"ts": "2026-03-22T21:51:29.130Z", "sachet": 7, "type": "j"}, {"type": "j", "ts": "2026-03-22T23:16:02.459Z", "sachet": 7}, {"sachet": 7, "ts": "2026-03-23T18:56:51.039Z", "type": "j"}, {"type": "j", "sachet": 7, "ts": "2026-03-23T18:56:51.183Z"}, {"type": "j", "ts": "2026-03-23T22:31:29.667Z", "sachet": 7}, {"type": "j", "sachet": 7, "ts": "2026-03-23T22:43:49.136Z"}, {"type": "j", "sachet": 7, "ts": "2026-03-24T17:22:35.324Z"}, {"sachet": 7, "ts": "2026-03-24T18:57:39.044Z", "type": "j"}, {"type": "j", "ts": "2026-03-24T22:03:00.000Z", "sachet": 7}, {"ts": "2026-03-25T08:03:40.141Z", "sachet": 7, "type": "j"}, {"type": "j", "sachet": 7, "ts": "2026-03-25T09:09:42.762Z"}, {"type": "j", "sachet": 8, "ts": "2026-03-25T13:45:16.349Z"}, {"sachet": 8, "ts": "2026-03-25T15:31:59.484Z", "type": "j"}, {"sachet": 8, "ts": "2026-03-25T18:54:47.984Z", "type": "j"}, {"type": "j", "ts": "2026-03-25T20:51:50.532Z", "sachet": 8}, {"type": "j", "sachet": 8, "ts": "2026-03-26T11:00:53.098Z"}, {"ts": "2026-03-26T13:51:33.921Z", "sachet": 8, "type": "j"}, {"type": "j", "ts": "2026-03-26T19:42:51.133Z", "sachet": 8}, {"ts": "2026-03-27T06:35:56.185Z", "sachet": 8, "type": "j"}, {"type": "j", "ts": "2026-03-27T09:51:24.955Z", "sachet": 8}, {"ts": "2026-03-27T18:07:24.161Z", "sachet": 9, "type": "j"}, {"sachet": 9, "ts": "2026-03-27T21:37:02.263Z", "type": "j"}, {"type": "j", "sachet": 9, "ts": "2026-03-28T08:22:41.764Z"}, {"sachet": 9, "ts": "2026-03-28T11:59:00.000Z", "type": "j"}, {"sachet": 9, "ts": "2026-03-28T14:59:27.981Z", "type": "j"}, {"sachet": 9, "ts": "2026-03-29T07:37:00.483Z", "type": "j"}, {"type": "j", "ts": "2026-03-29T15:05:32.619Z", "sachet": 9}, {"sachet": 9, "ts": "2026-03-30T15:40:17.844Z", "type": "j"}, {"type": "j", "sachet": 9, "ts": "2026-03-30T15:40:18.057Z"}, {"sachet": 9, "ts": "2026-03-30T15:40:20.906Z", "type": "j"}, {"sachet": 9, "ts": "2026-03-31T17:06:25.962Z", "type": "j"}, {"sachet": 9, "ts": "2026-03-31T18:40:00.862Z", "type": "j"}, {"type": "j", "ts": "2026-04-01T21:09:13.652Z", "sachet": 9}, {"ts": "2026-04-01T21:09:21.261Z", "sachet": 9, "type": "j"}, {"type": "j", "ts": "2026-04-03T09:09:51.141Z", "sachet": 9}, {"type": "j", "sachet": 9, "ts": "2026-04-04T08:19:55.446Z"}, {"ts": "2026-04-04T08:19:56.047Z", "sachet": 9, "type": "j"}, {"type": "j", "sachet": 10, "ts": "2026-04-04T10:50:04.227Z"}, {"type": "j", "sachet": 10, "ts": "2026-04-04T15:33:50.359Z"}, {"type": "j", "ts": "2026-04-04T15:33:51.021Z", "sachet": 10}, {"type": "j", "sachet": 10, "ts": "2026-04-04T19:16:21.719Z"}, {"type": "j", "ts": "2026-04-05T11:13:49.550Z", "sachet": 10}, {"type": "j", "sachet": 10, "ts": "2026-04-05T12:50:27.405Z"}, {"ts": "2026-04-05T16:00:43.141Z", "sachet": 10, "type": "j"}, {"ts": "2026-04-05T16:01:02.412Z", "sachet": 10, "type": "j"}, {"ts": "2026-04-06T07:00:19.774Z", "sachet": 10, "type": "j"}, {"type": "j", "ts": "2026-04-06T07:50:24.002Z", "sachet": 10}, {"ts": "2026-04-06T09:34:45.854Z", "sachet": 10, "type": "j"}, {"type": "j", "ts": "2026-04-06T10:25:49.454Z", "sachet": 10}, {"type": "j", "ts": "2026-04-07T16:48:19.784Z", "sachet": 10}, {"ts": "2026-04-07T16:57:25.031Z", "sachet": 10, "type": "j"}, {"ts": "2026-04-07T17:35:33.600Z", "sachet": 10, "type": "j"}, {"type": "j", "ts": "2026-04-08T18:46:22.585Z", "sachet": 11}, {"type": "j", "ts": "2026-04-08T18:46:22.747Z", "sachet": 11}, {"ts": "2026-04-10T09:51:48.416Z", "sachet": 11, "type": "j"}, {"type": "j", "ts": "2026-04-10T09:51:49.160Z", "sachet": 11}, {"type": "j", "ts": "2026-04-10T12:06:02.109Z", "sachet": 11}, {"sachet": 11, "ts": "2026-04-10T13:33:34.825Z", "type": "j"}, {"type": "j", "sachet": 11, "ts": "2026-04-10T15:12:34.518Z"}, {"ts": "2026-04-10T17:16:40.792Z", "sachet": 11, "type": "j"}, {"type": "j", "ts": "2026-04-13T17:46:02.023Z", "sachet": 11}, {"ts": "2026-04-15T19:01:19.762Z", "sachet": 11, "type": "j"}, {"type": "j", "ts": "2026-04-15T19:01:19.925Z", "sachet": 11}, {"type": "j", "sachet": 11, "ts": "2026-04-15T19:01:23.842Z"}, {"type": "j", "sachet": 11, "ts": "2026-04-17T13:06:28.682Z"}, {"type": "j", "sachet": 11, "ts": "2026-04-17T13:06:29.168Z"}, {"type": "j", "ts": "2026-04-17T13:06:29.669Z", "sachet": 11}, {"type": "j", "ts": "2026-04-22T08:35:23.136Z", "sachet": 12}, {"type": "j", "ts": "2026-04-27T16:52:25.343Z", "sachet": 12}, {"type": "j", "sachet": 12, "ts": "2026-05-05T17:14:16.586Z"}, {"ts": "2026-05-05T17:14:16.766Z", "sachet": 12, "type": "j"}, {"type": "j", "sachet": 12, "ts": "2026-05-07T09:30:03.901Z"}, {"ts": "2026-05-07T09:30:04.838Z", "sachet": 12, "type": "j"}, {"type": "j", "ts": "2026-05-07T11:49:00.867Z", "sachet": 12}, {"type": "j", "ts": "2026-06-11T10:29:59.843Z", "sachet": 12}, {"type": "j", "sachet": 12, "ts": "2026-06-11T10:30:00.904Z"}, {"type": "j", "sachet": 12, "ts": "2026-06-11T10:30:01.592Z"}, {"sachet": 12, "ts": "2026-06-11T12:08:37.592Z", "type": "j"}, {"ts": "2026-06-11T12:08:37.744Z", "sachet": 12, "type": "j"}, {"ts": "2026-06-20T19:40:45.233Z", "sachet": 12, "type": "j"}, {"type": "j", "ts": "2026-06-20T19:41:48.087Z", "sachet": 12}, {"type": "j", "sachet": 12, "ts": "2026-07-17T20:47:49.412Z"}, {"type": "j", "ts": "2026-07-17T21:46:03.973Z", "sachet": 12}, {"ts": "2026-07-17T21:46:04.971Z", "sachet": 12, "type": "j"}, {"sachet": 12, "ts": "2026-07-17T21:46:05.441Z", "type": "j"}, {"type": "j", "ts": "2026-07-17T21:55:38.795Z", "sachet": 12}, {"type": "j", "sachet": 12, "ts": "2026-07-17T23:49:09.853Z"}, {"type": "j", "ts": "2026-07-18T09:30:00.000Z", "sachet": 12}, {"ts": "2026-07-18T11:30:00.000Z", "sachet": 12, "type": "j"}, {"sachet": 12, "ts": "2026-07-18T14:35:08.707Z", "type": "j"}, {"sachet": 12, "ts": "2026-07-18T16:42:20.810Z", "type": "j"}, {"ts": "2026-07-19T09:48:01.042Z", "sachet": 12, "type": "j"}, {"sachet": 12, "ts": "2026-07-19T09:48:00.000Z", "type": "j"}, {"type": "j", "sachet": 12, "ts": "2026-07-19T10:32:28.363Z"}, {"ts": "2026-07-19T14:59:00.000Z", "sachet": 12, "type": "j"}, {"sachet": 12, "ts": "2026-07-19T18:50:00.000Z", "type": "j"}, {"type": "j", "sachet": 12, "ts": "2026-07-19T20:50:00.000Z"}, {"type": "j", "ts": "2026-07-20T16:11:00.000Z", "sachet": 30}, {"type": "j", "ts": "2026-07-20T17:12:01.933Z", "sachet": 30}, {"type": "j", "sachet": 30, "ts": "2026-07-20T19:14:34.753Z"}, {"sachet": 31, "ts": "2026-07-20T21:31:46.674Z", "type": "j"}, {"type": "j", "ts": "2026-07-21T16:25:00.000Z", "sachet": 31}];
+
+async function saveAchats() { toast('Instance de test — écriture désactivée.',1); }
+async function saveJ() { toast('Instance de test — écriture désactivée.',1); }
+
+function setData(entries) {
+  DATA = (entries || []).map(x => Array.isArray(x) ? x : [x.date, x.amount]);
+  DATA.sort((a, b) => a[0].localeCompare(b[0]));
+}
+
+let GUESSED = {}, GUESS_AVG = 0;
+function computeGuessed() {
+  GUESSED = {}; GUESS_AVG = 0;
+  const sorted = jSortedAsc();
+  if (!sorted.length) return;
+  const counts = {};
+  sorted.forEach(e => { const k = dstr(new Date(e.ts)); counts[k] = (counts[k]||0)+1; });
+  GUESS_AVG = Math.round(sorted.length / Object.keys(counts).length);
+  const today = todayKey();
+  const d = new Date(sorted[0].ts); d.setHours(0,0,0,0);
+  for (; dstr(d) < today; d.setDate(d.getDate()+1)) {
+    if (!counts[dstr(d)]) GUESSED[dstr(d)] = GUESS_AVG;
+  }
+}
+function startListeners() {
+  setData(SNAPSHOT_ACHATS);
+  J_LOG = SNAPSHOT_JLOG.filter(e => e.type === 'j' && !e.predicted);
+  computeGuessed();
+  renderAll();
+}
+
+/* ---------- date helpers ---------- */
+function pad2(n){ return String(n).padStart(2,'0'); }
+function dstr(d){ return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+function fmt(s){ const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; }
+function fmtTime(iso){ const d=new Date(iso); return pad2(d.getHours())+':'+pad2(d.getMinutes()); }
+function fmtDelta(ms){ const h=Math.floor(ms/3600000), m=Math.floor((ms%3600000)/60000); if(h===0) return `${m}min`; return `${h}h${pad2(m)}`; }
+function dateNum(s){ const [y,m,d]=s.split('-').map(Number); return Date.UTC(y,m-1,d)/86400000; }
+function daysBetween(a,b){ return dateNum(b)-dateNum(a); }
+function todayKey(){ return dstr(new Date()); }
+const MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+const MOIS_ABBR2 = ['JA','FE','MA','AV','MA','JU','JU','AO','SE','OC','NO','DE'];
+function monthLabel(y,m){ return `${MOIS[m][0].toUpperCase()+MOIS[m].slice(1)} ${y}`; }
+function monthKey(s){ return s.slice(0,7); }
+function distinctMonthsCount(startKey, endKey) {
+  const [sy,sm] = startKey.split('-').map(Number), [ey,em] = endKey.split('-').map(Number);
+  return (ey-sy)*12 + (em-sm) + 1;
+}
+
+/* ---------- achats stats ---------- */
+function achatRows() {
+  return DATA.map((d,i) => ({
+    dateStr: d[0], amount: d[1],
+    days: i===0 ? null : Math.round(daysBetween(DATA[i-1][0], d[0]))
+  }));
+}
+function achatStats() {
+  const R = achatRows();
+  const dArr = R.filter(r=>r.days!==null).map(r=>r.days);
+  const total = R.reduce((s,r)=>s+r.amount,0);
+  const avg = dArr.length ? dArr.reduce((a,b)=>a+b,0)/dArr.length : 0;
+  const maxD = dArr.length ? Math.max(...dArr) : 0;
+  const maxRow = R.find(r=>r.days===maxD);
+  const first = R[0], last = R[R.length-1];
+  const sinceLast = last ? Math.round(daysBetween(last.dateStr, todayKey())) : 0;
+  const nMonths = first ? distinctMonthsCount(monthKey(first.dateStr), monthKey(todayKey())) : 1;
+  return { R, total, avg, maxD, maxRow, first, last, sinceLast, avgCoutMois: total / Math.max(1,nMonths) };
+}
+
+/* ---------- J stats ---------- */
+function jSortedAsc() { return [...J_LOG].sort((a,b) => new Date(a.ts)-new Date(b.ts)); }
+function jStats() {
+  const sorted = jSortedAsc();
+  const todayJ = sorted.filter(e => dstr(new Date(e.ts)) === todayKey());
+  const last = sorted.length ? sorted[sorted.length-1] : null;
+  const activeDays = new Set(sorted.map(e => dstr(new Date(e.ts)))).size;
+  let weeks = 1, months = 1;
+  if (sorted.length) {
+    const firstD = new Date(sorted[0].ts), now = new Date();
+    weeks = Math.max(1, Math.ceil((now - firstD) / (7*86400000)));
+    months = distinctMonthsCount(monthKey(dstr(firstD)), monthKey(todayKey()));
+  }
+  return {
+    sorted, todayJ, last, total: sorted.length,
+    avgPerActiveDay: activeDays ? sorted.length/activeDays : 0,
+    avgPerWeek: sorted.length/weeks,
+    avgPerMonth: sorted.length/Math.max(1,months),
+  };
+}
+
+/* ---------- render: hero ---------- */
+function renderHero() {
+  const a = achatStats();
+  if (!a.last) return;
+  const days = a.sinceLast;
+  const level = days >= a.avg ? 'green' : days >= 10 ? 'yellow' : 'red';
+  const daysEl = document.getElementById('heroDays');
+  daysEl.textContent = days;
+  daysEl.className = 'hero-days ' + level;
+  document.getElementById('heroSub').textContent = 'depuis le ' + fmt(a.last.dateStr);
+  const pct = a.maxD ? Math.min(100, Math.round(days/a.maxD*100)) : 0;
+  const pf = document.getElementById('heroProgress');
+  pf.style.width = pct + '%';
+  pf.className = 'progress-fill ' + level;
+  document.getElementById('heroTotal').textContent = a.total.toLocaleString('fr-FR')+'€';
+  if (a.first) {
+    const [y,m] = a.first.dateStr.split('-').map(Number);
+    document.getElementById('heroTotalLbl').textContent = monthLabel(y, m-1).toUpperCase();
+  }
+  document.getElementById('heroAvg').textContent = a.avg.toFixed(1)+'j/jours';
+  document.getElementById('heroRecord').textContent = a.maxD+'jours';
+}
+
+/* ---------- render: cards grid (conso) ---------- */
+function renderCards() {
+  const a = achatStats();
+  const j = jStats();
+  document.getElementById('cJour').textContent = j.todayJ.length;
+  document.getElementById('cJourSub').textContent = j.last ? 'dernier il y a '+fmtDelta(Date.now()-new Date(j.last.ts)) : '—';
+  document.getElementById('cRecord').textContent = a.maxD+'J';
+  if (a.first) {
+    const [y,m] = a.first.dateStr.split('-').map(Number);
+    document.getElementById('cMonthLbl').textContent = monthLabel(y, m-1).toUpperCase();
+  }
+  document.getElementById('cTotalEur').textContent = a.total.toLocaleString('fr-FR')+'€';
+  document.getElementById('cTotalJ').textContent = j.total;
+  document.getElementById('cMoyConso').textContent = Math.round(j.avgPerActiveDay)+'J';
+  document.getElementById('cMoyCout').textContent = Math.round(a.avgCoutMois).toLocaleString('fr-FR')+'€';
+  document.getElementById('cMoySemaine').textContent = j.avgPerWeek.toFixed(1);
+  document.getElementById('cMoyMois').textContent = j.avgPerMonth.toFixed(1);
+}
+
+/* ---------- calendar ---------- */
+let calCursor = new Date(); calCursor.setDate(1);
+window.calNav = function(delta) { calCursor.setMonth(calCursor.getMonth()+delta); renderCalendar(); };
+function renderCalendar() {
+  const y = calCursor.getFullYear(), m = calCursor.getMonth();
+  document.getElementById('calTitle').textContent = monthLabel(y,m);
+  const jCount = {};
+  J_LOG.forEach(e => { const k = dstr(new Date(e.ts)); jCount[k] = (jCount[k]||0)+1; });
+  const achatSet = new Set(DATA.map(d => d[0]));
+  const first = new Date(y,m,1);
+  const startOffset = (first.getDay()+6)%7; // Monday=0
+  const daysInMonth = new Date(y,m+1,0).getDate();
+  const daysInPrevMonth = new Date(y,m,0).getDate();
+  const cells = [];
+  for (let i=startOffset-1;i>=0;i--) cells.push({ day: daysInPrevMonth-i, other:true });
+  for (let d=1; d<=daysInMonth; d++) cells.push({ day:d, other:false, date:new Date(y,m,d) });
+  while (cells.length % 7 !== 0) cells.push({ day: cells.length, other:true });
+  const today = todayKey();
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = cells.map(c => {
+    if (c.other) return `<div class="cal-cell other-month"><span class="cal-day">${c.day}</span></div>`;
+    const key = dstr(c.date);
+    const isToday = key === today;
+    const isAchat = achatSet.has(key);
+    const isFuture = key > today;
+    const count = jCount[key] || 0;
+    const guessed = !count && !isAchat && !isFuture && GUESSED[key];
+    const cls = ['cal-cell'];
+    if (isAchat) cls.push('achat'); else if (guessed) cls.push('guessed'); else if (isToday) cls.push('today');
+    if (isFuture) cls.push('future');
+    const countTxt = guessed ? GUESSED[key]+'j' : (count>0?count:'—');
+    return `<div class="${cls.join(' ')}" data-date="${key}"><span class="cal-day">${c.day}</span><span class="cal-count">${countTxt}</span></div>`;
+  }).join('');
+  grid.querySelectorAll('.cal-cell[data-date]').forEach(cell => {
+    cell.addEventListener('click', () => goToHistDay(cell.dataset.date));
+  });
+}
+
+/* ---------- 12-month J graph ---------- */
+function renderJGraph() {
+  const jSorted = jSortedAsc();
+  const firstJMonth = jSorted.length ? monthKey(dstr(new Date(jSorted[0].ts))) : null;
+  const now = new Date();
+  const months = [];
+  for (let i=11;i>=0;i--) {
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    months.push({ y:d.getFullYear(), m:d.getMonth(), key: d.getFullYear()+'-'+pad2(d.getMonth()+1) });
+  }
+  const counts = {};
+  jSorted.forEach(e => { const k = monthKey(dstr(new Date(e.ts))); counts[k] = (counts[k]||0)+1; });
+  const maxVal = Math.max(...months.map(mo=>counts[mo.key]||0), 1);
+  const el = document.getElementById('jGraph');
+  el.innerHTML = months.map(({y,m,key}) => {
+    const noData = firstJMonth === null || key < firstJMonth;
+    const val = counts[key] || 0;
+    let cls = 'green';
+    if (val > 50) cls = 'red'; else if (val >= 15) cls = 'yellow';
+    const pct = noData ? 55 : Math.max(4, Math.round((val / maxVal) * 100));
+    return `<div class="bar-col">
+      <span class="bar-val">${noData ? '—' : val}</span>
+      <div class="bar-rect ${noData?'nodata':cls}" style="height:${pct}%"></div>
+      <span class="bar-lbl">${MOIS_ABBR2[m]}<br>${String(y).slice(2)}</span>
+    </div>`;
+  }).join('');
+}
+
+/* ---------- historique de conso (day nav) ---------- */
+let histDay = todayKey();
+window.histDayNav = function(delta) {
+  const d = new Date(histDay+'T12:00:00'); d.setDate(d.getDate()+delta);
+  histDay = dstr(d); renderHistConso();
+};
+window.goToHistDay = function(dateStr) {
+  histDay = dateStr; renderHistConso();
+  document.getElementById('histConsoSection').scrollIntoView({behavior:'smooth', block:'start'});
+};
+function renderHistConso() {
+  document.getElementById('histDayLabel').textContent = fmt(histDay);
+  const sorted = jSortedAsc();
+  const idxByEntry = new Map(); sorted.forEach((e,i) => idxByEntry.set(e, i));
+  const origIdxOf = e => J_LOG.indexOf(e);
+  const dayEntries = sorted.filter(e => dstr(new Date(e.ts)) === histDay);
+  const el = document.getElementById('histConsoList');
+  if (!dayEntries.length) { el.innerHTML = `<div class="hist-empty">Aucune consommation ce jour</div>`; return; }
+  el.innerHTML = dayEntries.map(e => {
+    const num = idxByEntry.get(e) + 1;
+    const pos = idxByEntry.get(e);
+    let intervalHtml = `<span class="hist-interval na">—</span>`;
+    if (pos > 0) {
+      const ms = new Date(e.ts) - new Date(sorted[pos-1].ts);
+      const h = ms / 3600000;
+      const cls = h > 2 ? 'green' : h >= 1 ? 'yellow' : 'red';
+      intervalHtml = `<span class="hist-interval ${cls}">${fmtDelta(ms)}</span>`;
+    }
+    const oi = origIdxOf(e);
+    return `<div class="hist-row" data-oi="${oi}">
+      <div class="hist-row-top">
+        <span class="hist-left">J ${num} - sachet ${e.sachet ?? '—'}</span>
+        ${intervalHtml}
+        <button class="hist-time" data-oi="${oi}">${fmtTime(e.ts)}</button>
+        <button class="del-circle" onclick="delJ(${oi})"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+      </div>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.hist-row').forEach(row => {
+    row.addEventListener('click', ev => {
+      if (ev.target.closest('.del-circle') || ev.target.closest('.hist-time')) return;
+      const was = row.classList.contains('row-selected');
+      el.querySelectorAll('.row-selected').forEach(r => r.classList.remove('row-selected'));
+      if (!was) row.classList.add('row-selected');
+    });
+  });
+  el.querySelectorAll('.hist-time').forEach(btn => {
+    btn.addEventListener('click', ev => {
+      ev.stopPropagation();
+      const oi = parseInt(btn.dataset.oi);
+      const entry = J_LOG[oi];
+      if (!entry) return;
+      const input = document.createElement('input');
+      input.type = 'datetime-local'; input.className = 'hist-time-input';
+      const d = new Date(entry.ts);
+      input.value = new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+      btn.replaceWith(input); input.focus();
+      if (input.showPicker) { try { input.showPicker(); } catch(_) {} }
+      let done = false;
+      const commit = async () => {
+        if (done) return; done = true;
+        if (input.value) {
+          J_LOG[oi].ts = new Date(input.value).toISOString();
+          await saveJ(); toast('Date/heure modifiée ✓');
+        }
+        renderAll();
+      };
+      input.addEventListener('change', commit);
+      input.addEventListener('blur', commit);
+    });
+  });
+}
+
+/* ---------- achats: cards row ---------- */
+function renderAchatCards() {
+  const a = achatStats();
+  document.getElementById('aMoyInterval').textContent = a.avg.toFixed(1)+'j';
+  document.getElementById('aMoyIntervalSub').textContent = 'sur '+a.R.length+' achats';
+  document.getElementById('aRecord').textContent = a.maxD+'j';
+  document.getElementById('aRecordSub').textContent = a.maxRow ? fmt(a.maxRow.dateStr) : '—';
+}
+
+/* ---------- achats: 12-month € graph ---------- */
+function renderEurGraph() {
+  const now = new Date();
+  const months = [];
+  for (let i=11;i>=0;i--) {
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    months.push({ y:d.getFullYear(), m:d.getMonth(), key: d.getFullYear()+'-'+pad2(d.getMonth()+1) });
+  }
+  const totals = {};
+  DATA.forEach(([dateStr, amount]) => { const k = monthKey(dateStr); totals[k] = (totals[k]||0)+amount; });
+  const maxV = Math.max(...months.map(mo => totals[mo.key]||0), 1);
+  const el = document.getElementById('eurGraph');
+  el.innerHTML = months.map((mo,i) => {
+    const val = totals[mo.key] || 0;
+    const cls = val < 200 ? 'green' : val < 400 ? 'yellow' : 'red';
+    const pct = Math.max(4, Math.round((val/maxV)*100));
+    return `<div class="bar-col">
+      <span class="bar-val">${val ? val+'€' : ''}</span>
+      <div class="bar-rect ${cls}" style="height:${pct}%"></div>
+      <span class="bar-lbl">${MOIS_ABBR2[mo.m]}<br>${String(mo.y).slice(2)}</span>
+    </div>`;
+  }).join('');
+}
+
+/* ---------- historique d'achat (month nav) ---------- */
+let achatMonthCursor = new Date(); achatMonthCursor.setDate(1);
+window.achatMonthNav = function(delta) { achatMonthCursor.setMonth(achatMonthCursor.getMonth()+delta); renderHistAchat(); };
+function renderHistAchat() {
+  const y = achatMonthCursor.getFullYear(), m = achatMonthCursor.getMonth();
+  document.getElementById('histMonthLabel').textContent = monthLabel(y,m);
+  const key = y+'-'+pad2(m+1);
+  const R = achatRows().filter(r => monthKey(r.dateStr) === key);
+  const el = document.getElementById('histAchatList');
+  if (!R.length) { el.innerHTML = `<div class="hist-empty">Aucun achat ce mois</div>`; return; }
+  el.innerHTML = [...R].reverse().map(r => {
+    const badge = r.days === null ? `<span class="achat-badge na">—</span>`
+      : `<span class="achat-badge ${r.days>=20?'green':r.days>=10?'yellow':'red'}">→ ${r.days}j</span>`;
+    return `<div class="achat-row" data-date="${r.dateStr}">
+      <span class="achat-date">${fmt(r.dateStr)}</span>
+      <span class="achat-amount">${r.amount}€</span>
+      ${badge}
+      <button class="del-circle" onclick="delAchat('${r.dateStr}')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.achat-row').forEach(row => {
+    row.addEventListener('click', ev => {
+      if (ev.target.closest('.del-circle')) return;
+      const was = row.classList.contains('row-selected');
+      el.querySelectorAll('.row-selected').forEach(r => r.classList.remove('row-selected'));
+      if (!was) row.classList.add('row-selected');
+    });
+  });
+}
+
+/* ---------- actions ---------- */
+window.addExpense = async function() {
+  const d = document.getElementById('inDate').value;
+  const a = parseFloat(document.getElementById('inAmt').value);
+  if (!d || isNaN(a) || a<=0) return toast('Remplis la date et le montant.',1);
+  if (DATA.find(x=>x[0]===d)) return toast('Cette date existe déjà.',1);
+  DATA.push([d,a]); DATA.sort((a,b)=>a[0].localeCompare(b[0]));
+  renderAll();
+  document.getElementById('inAmt').value = '200'; setDate();
+  toast(`✓ ${a}€ le ${fmt(d)} ajouté !`);
+  await saveAchats();
+};
+window.delAchat = function(dateStr) {
+  setTimeout(async () => {
+    DATA = DATA.filter(d => d[0] !== dateStr);
+    await saveAchats(); renderAll(); toast('Achat supprimé ✓');
+  }, 0);
+};
+window.addJ = async function() {
+  const sachet = DATA.length || 1;
+  J_LOG.push({ type:'j', ts:new Date().toISOString(), sachet });
+  await saveJ();
+  toast(`J enregistré · sachet ${sachet}`);
+};
+window.undoJ = async function() {
+  if (!J_LOG.length) return toast('Rien à annuler.',1);
+  J_LOG.pop(); await saveJ(); toast('Dernier J annulé.');
+};
+window.delJ = function(oi) {
+  setTimeout(async () => {
+    if (oi<0 || oi>=J_LOG.length) return;
+    J_LOG.splice(oi,1); await saveJ(); toast('Entrée supprimée.');
+  }, 0);
+};
+window.switchTab = function(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  document.getElementById('navConso').classList.toggle('active-conso', name==='conso');
+  document.getElementById('navAchat').classList.toggle('active-achat', name==='achat');
+};
+function setDate() {
+  const t = new Date();
+  document.getElementById('inDate').value = `${t.getFullYear()}-${pad2(t.getMonth()+1)}-${pad2(t.getDate())}`;
+}
+let tt;
+window.toast = function(msg, err=0) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.borderLeftColor = err ? 'var(--red)' : 'var(--blue)';
+  el.className = 'toast on'; clearTimeout(tt);
+  tt = setTimeout(() => el.className = 'toast', 3000);
+};
+document.addEventListener('click', e => {
+  if (!e.target.closest('.hist-row') && !e.target.closest('.achat-row')) {
+    document.querySelectorAll('.row-selected').forEach(r => r.classList.remove('row-selected'));
+  }
+});
+document.addEventListener('keydown', e => { if (e.key==='Enter' && e.target.closest('.add-fields')) window.addExpense(); });
+
+function renderAll() {
+  if (!DATA.length) return;
+  renderHero();
+  renderCards();
+  renderCalendar();
+  renderJGraph();
+  renderHistConso();
+  renderAchatCards();
+  renderEurGraph();
+  renderHistAchat();
+}
+
+/* ---------- notifications PWA ---------- */
+async function initNotifBanner() {
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+  if (localStorage.getItem('notifDismissed')) return;
+  if (Notification.permission !== 'default') return;
+  if (!(await isSupported().catch(() => false))) return;
+  document.getElementById('notifBanner').style.display = 'flex';
+}
+window.dismissNotifBanner = function() {
+  localStorage.setItem('notifDismissed', '1');
+  document.getElementById('notifBanner').style.display = 'none';
+};
+window.enableNotifications = async function() {
+  try {
+    const reg = await navigator.serviceWorker.register('/tracker-depenses/firebase-messaging-sw.js', { scope: '/tracker-depenses/' });
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { toast('Notifications refusées.', 1); return; }
+    const messaging = getMessaging(app);
+    const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+    if (!token) { toast('Impossible de récupérer le token.', 1); return; }
+    await setDoc(REF_DEVICE, { token, updatedAt: new Date().toISOString() });
+    onMessage(messaging, payload => toast(payload.notification?.body || 'Notification reçue'));
+    window.dismissNotifBanner();
+    toast('Rappels activés ✓');
+  } catch (e) {
+    toast('Erreur activation notifications.', 1);
+  }
+};
+
+setDate();
+startListeners();
+</script>
+</body>
+</html>
