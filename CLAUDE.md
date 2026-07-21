@@ -40,7 +40,9 @@ const firebaseConfig = {
 - Firebase 10.12.0 via CDN gstatic, `<script type="module">`
 
 ## UI — mobile-first, calqué sur Figma (node-id=6-3)
-Header commun : hero "jours depuis dernier achat" + barre de progression + 3 stats, tabs Consommation (bleu) / Achat (vert).
+Header commun : hero "jours depuis dernier achat" + barre de progression + 3 stats, tabs Consommation (bleu) / Achat (vert). En haut à droite du hero : bouton mode Normal/Prédiction (jaune, bordure verte, Figma node 36-513).
+
+**Mode Prédiction** : les jours sans aucun log entre le 1er log et hier sont estimés à la moyenne arrondie de J par jour actif (`computeGuessed()`, entrées `estimated:true` en mémoire seulement — jamais écrites dans Firebase). Affichage calendrier : variant hachuré "Calendar cell / Guessed" (node 36-461, fond clair strié, jour `#1d1d1d`, conso bleue "4j"). Les estimations comptent dans les stats conso, le graphique J 12 mois et l'historique du jour (mention bleue). Le mode Normal n'affiche que les données réelles.
 
 **Tab Consommation** : grille 2×4 de stats, calendrier mensuel navigable, graphique 12 mois J consommés, historique de conso par jour (heure éditable, picker natif `datetime-local`), FAB J + annuler toujours visible.
 

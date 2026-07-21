@@ -30,6 +30,11 @@ input { font-family:'Poppins',sans-serif; }
 /* HERO HEADER */
 .hero { background:var(--surface); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:8px; }
 .hero-label { font-size:18px; text-transform:uppercase; color:var(--text); }
+.hero-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.hero-top .hero-label { flex:1; }
+/* bouton mode Normal/Prédiction (Figma node 36-513) */
+.mode-btn { background:var(--yellow); border:1px solid var(--green); border-radius:8px; padding:12px 16px; font-size:18px; text-transform:uppercase; color:var(--black); cursor:pointer; flex-shrink:0; }
+.mode-btn:active { background:#ceb478; }
 .hero-period { display:flex; align-items:flex-end; gap:8px; }
 .hero-days { font-size:40px; line-height:1; }
 .hero-days.green { color:var(--green); } .hero-days.yellow { color:var(--yellow); } .hero-days.red { color:var(--red); }
@@ -97,6 +102,15 @@ input { font-family:'Poppins',sans-serif; }
 .cal-cell.achat .cal-day { color:var(--black); }
 .cal-count { font-size:14px; color:var(--yellow); }
 .cal-cell.achat .cal-count { color:var(--red); }
+/* variant Figma "Calendar cell / Guessed" (node 36-461) : jour estimé en mode prédiction */
+.cal-cell.guessed {
+  background:
+    linear-gradient(rgba(255,255,255,0.2), rgba(255,255,255,0.2)),
+    repeating-linear-gradient(45deg, #f2f2f2 0 1px, #bfbfbf 1px 2.47px);
+  border-color:#1d1d1d;
+}
+.cal-cell.guessed .cal-day { color:#1d1d1d; }
+.cal-cell.guessed .cal-count { color:var(--blue); }
 
 /* BAR GRAPH (12 months) */
 .bar-graph { display:flex; align-items:flex-end; gap:4px; height:235px; }
@@ -176,7 +190,10 @@ input { font-family:'Poppins',sans-serif; }
 
   <!-- HERO HEADER (shared) -->
   <div class="hero">
-    <p class="hero-label">Depuis le dernier achat</p>
+    <div class="hero-top">
+      <p class="hero-label">Depuis le dernier achat</p>
+      <button class="mode-btn" id="modeBtn" onclick="togglePredict()">Normal</button>
+    </div>
     <div class="hero-period">
       <span class="hero-days" id="heroDays">—</span><span class="hero-days-unit">jours</span>
     </div>
@@ -393,10 +410,40 @@ function achatStats() {
   return { R, total, avg, maxD, maxRow, first, last, sinceLast, avgCoutMois: total / Math.max(1,nMonths) };
 }
 
+/* ---------- mode prédiction ---------- */
+// Jours sans aucun log entre le 1er log et hier, estimés à la moyenne
+// arrondie de J par jour actif. Calculé à la volée, jamais écrit dans Firebase.
+let PREDICT = false;
+let GUESSED = {}, GUESS_AVG = 0, EST_LOG = [];
+function computeGuessed() {
+  GUESSED = {}; GUESS_AVG = 0; EST_LOG = [];
+  const sorted = jSortedAsc();
+  if (!sorted.length) return;
+  const counts = {};
+  sorted.forEach(e => { const k = dstr(new Date(e.ts)); counts[k] = (counts[k]||0)+1; });
+  GUESS_AVG = Math.round(sorted.length / Object.keys(counts).length);
+  const today = todayKey();
+  const d = new Date(sorted[0].ts); d.setHours(0,0,0,0);
+  for (; dstr(d) < today; d.setDate(d.getDate()+1)) {
+    if (!counts[dstr(d)]) GUESSED[dstr(d)] = GUESS_AVG;
+  }
+  const HRS = [9,13,17,21];
+  Object.keys(GUESSED).forEach(k => {
+    for (let i = 0; i < GUESSED[k]; i++)
+      EST_LOG.push({ type:'j', ts: k+'T'+pad2(HRS[i%4])+':00:00', sachet:0, estimated:true });
+  });
+}
+function jAllSortedAsc() { return [...J_LOG, ...EST_LOG].sort((a,b) => new Date(a.ts)-new Date(b.ts)); }
+window.togglePredict = function() {
+  PREDICT = !PREDICT;
+  document.getElementById('modeBtn').textContent = PREDICT ? 'Prédiction' : 'Normal';
+  renderAll();
+};
+
 /* ---------- J stats ---------- */
 function jSortedAsc() { return [...J_LOG].sort((a,b) => new Date(a.ts)-new Date(b.ts)); }
 function jStats() {
-  const sorted = jSortedAsc();
+  const sorted = PREDICT ? jAllSortedAsc() : jSortedAsc();
   const todayJ = sorted.filter(e => dstr(new Date(e.ts)) === todayKey());
   const last = sorted.length ? sorted[sorted.length-1] : null;
   const activeDays = new Set(sorted.map(e => dstr(new Date(e.ts)))).size;
@@ -482,10 +529,12 @@ function renderCalendar() {
     const isAchat = achatSet.has(key);
     const isFuture = key > today;
     const count = jCount[key] || 0;
+    const guessed = PREDICT && !count && !isAchat && !isFuture && GUESSED[key];
     const cls = ['cal-cell'];
-    if (isAchat) cls.push('achat'); else if (isToday) cls.push('today');
+    if (isAchat) cls.push('achat'); else if (guessed) cls.push('guessed'); else if (isToday) cls.push('today');
     if (isFuture) cls.push('future');
-    return `<div class="${cls.join(' ')}" data-date="${key}"><span class="cal-day">${c.day}</span><span class="cal-count">${count>0?count:'—'}</span></div>`;
+    const countTxt = guessed ? GUESSED[key]+'j' : (count>0?count:'—');
+    return `<div class="${cls.join(' ')}" data-date="${key}"><span class="cal-day">${c.day}</span><span class="cal-count">${countTxt}</span></div>`;
   }).join('');
   grid.querySelectorAll('.cal-cell[data-date]').forEach(cell => {
     cell.addEventListener('click', () => goToHistDay(cell.dataset.date));
@@ -494,7 +543,7 @@ function renderCalendar() {
 
 /* ---------- 12-month J graph ---------- */
 function renderJGraph() {
-  const jSorted = jSortedAsc();
+  const jSorted = PREDICT ? jAllSortedAsc() : jSortedAsc();
   const firstJMonth = jSorted.length ? monthKey(dstr(new Date(jSorted[0].ts))) : null;
   const now = new Date();
   const months = [];
@@ -537,7 +586,10 @@ function renderHistConso() {
   const origIdxOf = e => J_LOG.indexOf(e);
   const dayEntries = sorted.filter(e => dstr(new Date(e.ts)) === histDay);
   const el = document.getElementById('histConsoList');
-  if (!dayEntries.length) { el.innerHTML = `<div class="hist-empty">Aucune consommation ce jour</div>`; return; }
+  if (!dayEntries.length) {
+    if (PREDICT && GUESSED[histDay]) { el.innerHTML = `<div class="hist-empty" style="color:var(--blue)">${GUESSED[histDay]} consos estimées (moyenne — donnée non réelle)</div>`; return; }
+    el.innerHTML = `<div class="hist-empty">Aucune consommation ce jour</div>`; return;
+  }
   el.innerHTML = dayEntries.map(e => {
     const num = idxByEntry.get(e) + 1;
     const pos = idxByEntry.get(e);
@@ -717,6 +769,7 @@ document.addEventListener('keydown', e => { if (e.key==='Enter' && e.target.clos
 
 function renderAll() {
   if (!DATA.length) return;
+  computeGuessed();
   renderHero();
   renderCards();
   renderCalendar();
