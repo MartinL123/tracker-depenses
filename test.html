@@ -183,7 +183,7 @@ input { font-family:'Poppins',sans-serif; }
 <body>
 <div style="border:1.5px dashed #8a5cf6;background:rgba(138,92,246,0.12);color:#c9b3ff;border-radius:10px;padding:8px 12px;font-size:12px;text-align:center;margin:10px auto 0;max-width:456px;">
   🧪 <b>INSTANCE DE TEST</b> — snapshot du 21/07/2026, écriture désactivée.<br>
-  Jours hachurés = conso estimée à la moyenne (4j/jour), aucune donnée réelle ce jour-là.
+  Jours hachurés = conso estimée à la moyenne (4j/jour) — comptée dans les stats et le graphique.
 </div>
 <div class="app">
 
@@ -339,7 +339,8 @@ function setData(entries) {
   DATA.sort((a, b) => a[0].localeCompare(b[0]));
 }
 
-let GUESSED = {}, GUESS_AVG = 0;
+let GUESSED = {}, GUESS_AVG = 0, EST_LOG = [];
+function jAllSortedAsc() { return [...J_LOG, ...EST_LOG].sort((a,b) => new Date(a.ts)-new Date(b.ts)); }
 function computeGuessed() {
   GUESSED = {}; GUESS_AVG = 0;
   const sorted = jSortedAsc();
@@ -352,6 +353,12 @@ function computeGuessed() {
   for (; dstr(d) < today; d.setDate(d.getDate()+1)) {
     if (!counts[dstr(d)]) GUESSED[dstr(d)] = GUESS_AVG;
   }
+  EST_LOG = [];
+  const HRS = [9,13,17,21];
+  Object.keys(GUESSED).forEach(k => {
+    for (let i = 0; i < GUESSED[k]; i++)
+      EST_LOG.push({ type:'j', ts: k+'T'+pad2(HRS[i%4])+':00:00', sachet:0, estimated:true });
+  });
 }
 function startListeners() {
   setData(SNAPSHOT_ACHATS);
@@ -401,7 +408,7 @@ function achatStats() {
 /* ---------- J stats ---------- */
 function jSortedAsc() { return [...J_LOG].sort((a,b) => new Date(a.ts)-new Date(b.ts)); }
 function jStats() {
-  const sorted = jSortedAsc();
+  const sorted = jAllSortedAsc();
   const todayJ = sorted.filter(e => dstr(new Date(e.ts)) === todayKey());
   const last = sorted.length ? sorted[sorted.length-1] : null;
   const activeDays = new Set(sorted.map(e => dstr(new Date(e.ts)))).size;
@@ -501,7 +508,7 @@ function renderCalendar() {
 
 /* ---------- 12-month J graph ---------- */
 function renderJGraph() {
-  const jSorted = jSortedAsc();
+  const jSorted = jAllSortedAsc();
   const firstJMonth = jSorted.length ? monthKey(dstr(new Date(jSorted[0].ts))) : null;
   const now = new Date();
   const months = [];
@@ -544,7 +551,10 @@ function renderHistConso() {
   const origIdxOf = e => J_LOG.indexOf(e);
   const dayEntries = sorted.filter(e => dstr(new Date(e.ts)) === histDay);
   const el = document.getElementById('histConsoList');
-  if (!dayEntries.length) { el.innerHTML = `<div class="hist-empty">Aucune consommation ce jour</div>`; return; }
+  if (!dayEntries.length) {
+    if (GUESSED[histDay]) { el.innerHTML = `<div class="hist-empty" style="color:var(--blue)">${GUESSED[histDay]} consos estimées (moyenne — donnée non réelle)</div>`; return; }
+    el.innerHTML = `<div class="hist-empty">Aucune consommation ce jour</div>`; return;
+  }
   el.innerHTML = dayEntries.map(e => {
     const num = idxByEntry.get(e) + 1;
     const pos = idxByEntry.get(e);
