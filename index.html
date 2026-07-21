@@ -223,7 +223,7 @@ input { font-family:'Poppins',sans-serif; }
       <div class="card"><p class="card-lbl">Record</p><p class="card-val green" id="cRecord">—</p><p class="card-sub">intervalle d'achat</p></div>
       <div class="card"><p class="card-lbl" id="cMonthLbl">—</p><p class="card-val white" id="cTotalEur">—</p><p class="card-sub">argent dépensé</p></div>
       <div class="card"><p class="card-lbl">Total</p><p class="card-val white" id="cTotalJ">—</p><p class="card-sub">conso total</p></div>
-      <div class="card"><p class="card-lbl">Moy. achat</p><p class="card-val yellow" id="cMoyAchat">—</p><p class="card-sub">intervalle</p></div>
+      <div class="card"><p class="card-lbl">Moy. conso</p><p class="card-val yellow" id="cMoyConso">—</p><p class="card-sub">conso par jours</p></div>
       <div class="card"><p class="card-lbl">Moy. coût</p><p class="card-val yellow" id="cMoyCout">—</p><p class="card-sub">achats/mois</p></div>
       <div class="card"><p class="card-lbl">Moy. semaine</p><p class="card-val yellow" id="cMoySemaine">—</p><p class="card-sub">conso/semaine</p></div>
       <div class="card"><p class="card-lbl">Moy. mois</p><p class="card-val yellow" id="cMoyMois">—</p><p class="card-sub">conso/mois</p></div>
@@ -450,7 +450,7 @@ function renderCards() {
   }
   document.getElementById('cTotalEur').textContent = a.total.toLocaleString('fr-FR')+'€';
   document.getElementById('cTotalJ').textContent = j.total;
-  document.getElementById('cMoyAchat').textContent = a.avg.toFixed(1)+'J';
+  document.getElementById('cMoyConso').textContent = Math.round(j.avgPerActiveDay)+'J';
   document.getElementById('cMoyCout').textContent = Math.round(a.avgCoutMois).toLocaleString('fr-FR')+'€';
   document.getElementById('cMoySemaine').textContent = j.avgPerWeek.toFixed(1);
   document.getElementById('cMoyMois').textContent = j.avgPerMonth.toFixed(1);
