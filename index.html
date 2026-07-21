@@ -30,11 +30,19 @@ input { font-family:'Poppins',sans-serif; }
 /* HERO HEADER */
 .hero { background:var(--surface); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:8px; }
 .hero-label { font-size:18px; text-transform:uppercase; color:var(--text); }
-.hero-top { display:flex; align-items:center; justify-content:space-between; gap:64px; }
+.hero-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .hero-top .hero-label { flex:1; }
 /* bouton mode Normal/Prédiction (Figma node 36-513) */
 .mode-btn { background:var(--yellow); border:1px solid var(--green); border-radius:8px; padding:12px 16px; font-size:18px; text-transform:uppercase; color:var(--black); cursor:pointer; flex-shrink:0; }
 .mode-btn:active { background:#ceb478; }
+/* petits écrans : titre forcé sur 2 lignes, on compacte pour que "Prédiction" tienne */
+@media (max-width: 430px) {
+  .hero-top .hero-label { font-size:17px; }
+  .mode-btn { font-size:16px; padding:10px 12px; }
+}
+@media (max-width: 380px) {
+  .hero-top .hero-label { font-size:16px; }
+}
 .hero-period { display:flex; align-items:flex-end; gap:8px; }
 .hero-days { font-size:40px; line-height:1; }
 .hero-days.green { color:var(--green); } .hero-days.yellow { color:var(--yellow); } .hero-days.red { color:var(--red); }
@@ -111,6 +119,7 @@ input { font-family:'Poppins',sans-serif; }
 }
 .cal-cell.guessed .cal-day { color:#1d1d1d; }
 .cal-cell.guessed .cal-count { color:var(--blue); }
+.cal-cell.achat .cal-count.est { color:var(--blue); }
 
 /* BAR GRAPH (12 months) */
 .bar-graph { display:flex; align-items:flex-end; gap:4px; height:235px; }
@@ -139,6 +148,8 @@ input { font-family:'Poppins',sans-serif; }
 .hist-time:hover { color:var(--blue); }
 .hist-time-input { background:var(--bg); border:1px solid var(--blue); color:var(--text); font-family:'Poppins',sans-serif; font-size:13px; padding:4px 6px; border-radius:6px; outline:none; max-width:150px; }
 .hist-empty { text-align:center; color:var(--muted); font-size:14px; padding:16px 0; }
+.hist-left.est { color:var(--blue); }
+.hist-time.est { text-decoration:none; cursor:default; color:var(--muted); }
 
 /* DELETE CIRCLE */
 .del-circle { display:none; width:32px; height:32px; min-width:32px; background:var(--red); border-radius:50%; border:none; cursor:pointer; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 14px rgba(240,68,56,0.45); transition:transform 0.15s; animation:popIn 0.2s cubic-bezier(.34,1.56,.64,1); padding:0; }
@@ -191,7 +202,7 @@ input { font-family:'Poppins',sans-serif; }
   <!-- HERO HEADER (shared) -->
   <div class="hero">
     <div class="hero-top">
-      <p class="hero-label">Depuis le dernier achat</p>
+      <p class="hero-label">Depuis le dernier<br>achat</p>
       <button class="mode-btn" id="modeBtn" onclick="togglePredict()">Normal</button>
     </div>
     <div class="hero-period">
@@ -529,12 +540,12 @@ function renderCalendar() {
     const isAchat = achatSet.has(key);
     const isFuture = key > today;
     const count = jCount[key] || 0;
-    const guessed = PREDICT && !count && !isAchat && !isFuture && GUESSED[key];
+    const est = PREDICT && !count && !isFuture && GUESSED[key];
     const cls = ['cal-cell'];
-    if (isAchat) cls.push('achat'); else if (guessed) cls.push('guessed'); else if (isToday) cls.push('today');
+    if (isAchat) cls.push('achat'); else if (est) cls.push('guessed'); else if (isToday) cls.push('today');
     if (isFuture) cls.push('future');
-    const countTxt = guessed ? GUESSED[key]+'j' : (count>0?count:'—');
-    return `<div class="${cls.join(' ')}" data-date="${key}"><span class="cal-day">${c.day}</span><span class="cal-count">${countTxt}</span></div>`;
+    const countTxt = est ? GUESSED[key]+'j' : (count>0?count:'—');
+    return `<div class="${cls.join(' ')}" data-date="${key}"><span class="cal-day">${c.day}</span><span class="cal-count${est&&isAchat?' est':''}">${countTxt}</span></div>`;
   }).join('');
   grid.querySelectorAll('.cal-cell[data-date]').forEach(cell => {
     cell.addEventListener('click', () => goToHistDay(cell.dataset.date));
@@ -581,15 +592,12 @@ window.goToHistDay = function(dateStr) {
 };
 function renderHistConso() {
   document.getElementById('histDayLabel').textContent = fmt(histDay);
-  const sorted = jSortedAsc();
+  const sorted = PREDICT ? jAllSortedAsc() : jSortedAsc();
   const idxByEntry = new Map(); sorted.forEach((e,i) => idxByEntry.set(e, i));
   const origIdxOf = e => J_LOG.indexOf(e);
   const dayEntries = sorted.filter(e => dstr(new Date(e.ts)) === histDay);
   const el = document.getElementById('histConsoList');
-  if (!dayEntries.length) {
-    if (PREDICT && GUESSED[histDay]) { el.innerHTML = `<div class="hist-empty" style="color:var(--blue)">${GUESSED[histDay]} consos estimées (moyenne — donnée non réelle)</div>`; return; }
-    el.innerHTML = `<div class="hist-empty">Aucune consommation ce jour</div>`; return;
-  }
+  if (!dayEntries.length) { el.innerHTML = `<div class="hist-empty">Aucune consommation ce jour</div>`; return; }
   el.innerHTML = dayEntries.map(e => {
     const num = idxByEntry.get(e) + 1;
     const pos = idxByEntry.get(e);
@@ -599,6 +607,15 @@ function renderHistConso() {
       const h = ms / 3600000;
       const cls = h > 2 ? 'green' : h >= 1 ? 'yellow' : 'red';
       intervalHtml = `<span class="hist-interval ${cls}">${fmtDelta(ms)}</span>`;
+    }
+    if (e.estimated) {
+      return `<div class="hist-row est">
+        <div class="hist-row-top">
+          <span class="hist-left est">J ${num} - estimé</span>
+          ${intervalHtml}
+          <span class="hist-time est">${fmtTime(e.ts)}</span>
+        </div>
+      </div>`;
     }
     const oi = origIdxOf(e);
     return `<div class="hist-row" data-oi="${oi}">
@@ -610,7 +627,7 @@ function renderHistConso() {
       </div>
     </div>`;
   }).join('');
-  el.querySelectorAll('.hist-row').forEach(row => {
+  el.querySelectorAll('.hist-row:not(.est)').forEach(row => {
     row.addEventListener('click', ev => {
       if (ev.target.closest('.del-circle') || ev.target.closest('.hist-time')) return;
       const was = row.classList.contains('row-selected');
